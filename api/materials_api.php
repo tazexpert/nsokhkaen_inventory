@@ -36,8 +36,11 @@ function listMaterials(PDO $pdo): void
     $sql = "SELECT m.*, c.name AS category_name FROM materials m LEFT JOIN categories c ON c.id = m.category_id";
     $params = [];
     if ($keyword !== '') {
-        $sql .= " WHERE m.name LIKE :kw OR m.material_code LIKE :kw";
-        $params['kw'] = "%$keyword%";
+        // Two distinct placeholders: PDO with ATTR_EMULATE_PREPARES=false (native
+        // prepared statements) does not allow the same named parameter twice.
+        $sql .= " WHERE m.name LIKE :kw1 OR m.material_code LIKE :kw2";
+        $params['kw1'] = "%$keyword%";
+        $params['kw2'] = "%$keyword%";
     }
     $sql .= " ORDER BY m.id DESC";
     $stmt = $pdo->prepare($sql);

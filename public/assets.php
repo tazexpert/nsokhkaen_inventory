@@ -3,6 +3,7 @@ require_once __DIR__ . '/../includes/header.php';
 requireAdmin();
 $pdo = getDbConnection();
 $categories = $pdo->query("SELECT * FROM categories WHERE item_type = 'asset' ORDER BY name")->fetchAll();
+$storageLocations = $pdo->query('SELECT * FROM storage_locations ORDER BY name')->fetchAll();
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -78,7 +79,13 @@ $categories = $pdo->query("SELECT * FROM categories WHERE item_type = 'asset' OR
                     </div>
                     <div class="mb-3">
                         <label class="form-label">สถานที่จัดเก็บ</label>
-                        <input type="text" class="form-control" id="a_storage_location">
+                        <select class="form-select" id="a_storage_location">
+                            <option value="">-- ไม่ระบุ --</option>
+                            <?php foreach ($storageLocations as $loc): ?>
+                                <option value="<?= htmlspecialchars($loc['name']) ?>"><?= htmlspecialchars($loc['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div class="form-text">จัดการรายการสถานที่จัดเก็บได้ที่เมนู "ตั้งค่าระบบ"</div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">หมายเหตุ</label>

@@ -4,6 +4,18 @@ const IMPORT_API = BASE_URL_JS + 'api/import_api.php';
 const STATUS_LABEL = { available: 'พร้อมใช้งาน', borrowed: 'ถูกยืมอยู่', maintenance: 'ซ่อมบำรุง', disposed: 'จำหน่ายแล้ว' };
 const STATUS_BADGE = { available: 'success', borrowed: 'warning', maintenance: 'secondary', disposed: 'dark' };
 
+// If the item's saved storage_location isn't in the current master list
+// (e.g. it was removed from Settings), add it so the dropdown still shows
+// the real current value instead of silently resetting to blank.
+function ensureSelectOption(selectEl, value) {
+    if (!value) return;
+    const $select = $(selectEl);
+    if ($select.find(`option[value="${CSS.escape(value)}"]`).length === 0) {
+        $select.append(`<option value="${value}">${value} (ไม่อยู่ในรายการ)</option>`);
+    }
+    $select.val(value);
+}
+
 function loadAssets(keyword = '') {
     $.get(API, { action: 'list', keyword }, function (res) {
         const tbody = $('#assetsTable tbody').empty();
@@ -43,7 +55,7 @@ function editAsset(id) {
         $('#a_serial_number').val(a.serial_number);
         $('#a_status').val(a.status);
         $('#a_acquired_date').val(a.acquired_date);
-        $('#a_storage_location').val(a.storage_location);
+        ensureSelectOption('#a_storage_location', a.storage_location);
         $('#a_note').val(a.note);
         $('#statusWrapper').show();
         $('#assetModalTitle').text('แก้ไขครุภัณฑ์: ' + a.name);

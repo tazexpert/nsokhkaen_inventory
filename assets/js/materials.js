@@ -1,6 +1,18 @@
 const API = BASE_URL_JS + 'api/materials_api.php';
 const IMPORT_API = BASE_URL_JS + 'api/import_api.php';
 
+// If the item's saved storage_location isn't in the current master list
+// (e.g. it was removed from Settings), add it so the dropdown still shows
+// the real current value instead of silently resetting to blank.
+function ensureSelectOption(selectEl, value) {
+    if (!value) return;
+    const $select = $(selectEl);
+    if ($select.find(`option[value="${CSS.escape(value)}"]`).length === 0) {
+        $select.append(`<option value="${value}">${value} (ไม่อยู่ในรายการ)</option>`);
+    }
+    $select.val(value);
+}
+
 function loadMaterials(keyword = '') {
     $.get(API, { action: 'list', keyword }, function (res) {
         const tbody = $('#materialsTable tbody').empty();
@@ -41,7 +53,7 @@ function editMaterial(id) {
         $('#m_unit_cost').val(m.unit_cost);
         $('#m_stock_qty').val(m.stock_qty).prop('disabled', true);
         $('#m_min_stock').val(m.min_stock);
-        $('#m_storage_location').val(m.storage_location);
+        ensureSelectOption('#m_storage_location', m.storage_location);
         $('#m_note').val(m.note);
         $('#materialModalTitle').text('แก้ไขวัสดุ: ' + m.name);
         new bootstrap.Modal('#materialModal').show();

@@ -24,6 +24,24 @@ CREATE TABLE users (
 ) ENGINE=InnoDB;
 
 -- ------------------------------------------------------------
+-- Application settings (key/value) - editable from the Settings menu
+-- ------------------------------------------------------------
+CREATE TABLE settings (
+    `key` VARCHAR(50) NOT NULL PRIMARY KEY,
+    `value` VARCHAR(255) NOT NULL,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- ------------------------------------------------------------
+-- Storage locations master list - used as a dropdown for materials/assets
+-- ------------------------------------------------------------
+CREATE TABLE storage_locations (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- ------------------------------------------------------------
 -- Categories (shared by materials and assets)
 -- ------------------------------------------------------------
 CREATE TABLE categories (
@@ -116,6 +134,16 @@ CREATE TABLE asset_transactions (
 INSERT INTO users (username, password_hash, full_name, role) VALUES
 ('admin', '$2y$12$fuD/beirJBBABd/usQP9oebzSe8/YoNL6kdSYTJ7nqg.ba.anUcFO', 'ผู้ดูแลระบบ', 'admin'),
 ('staff1', '$2y$12$fuD/beirJBBABd/usQP9oebzSe8/YoNL6kdSYTJ7nqg.ba.anUcFO', 'เจ้าหน้าที่พัสดุ', 'staff');
+
+INSERT INTO settings (`key`, `value`) VALUES
+('app_name', 'ระบบบริหารจัดการวัสดุและครุภัณฑ์ สำนักงานสถิติจังหวัดขอนแก่น'),
+('app_url', 'http://localhost/nsokhkaen_inventory/');
+
+INSERT INTO storage_locations (name) VALUES
+('ห้องพัสดุ ชั้น 1'),
+('ห้องปฏิบัติการ ชั้น 2'),
+('ห้องธุรการ ชั้น 1'),
+('ห้องประชุม ชั้น 3');
 
 INSERT INTO categories (name, item_type) VALUES
 ('เครื่องเขียน', 'material'),

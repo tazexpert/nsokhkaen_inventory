@@ -36,8 +36,11 @@ function listAssets(PDO $pdo): void
     $sql = "SELECT a.*, c.name AS category_name FROM assets a LEFT JOIN categories c ON c.id = a.category_id";
     $params = [];
     if ($keyword !== '') {
-        $sql .= " WHERE a.name LIKE :kw OR a.asset_code LIKE :kw";
-        $params['kw'] = "%$keyword%";
+        // Two distinct placeholders: PDO with ATTR_EMULATE_PREPARES=false (native
+        // prepared statements) does not allow the same named parameter twice.
+        $sql .= " WHERE a.name LIKE :kw1 OR a.asset_code LIKE :kw2";
+        $params['kw1'] = "%$keyword%";
+        $params['kw2'] = "%$keyword%";
     }
     $sql .= " ORDER BY a.id DESC";
     $stmt = $pdo->prepare($sql);

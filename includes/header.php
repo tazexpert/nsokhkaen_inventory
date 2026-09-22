@@ -41,6 +41,9 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                 <li class="nav-item">
                     <a class="nav-link <?= $currentPage === 'reports.php' ? 'active' : '' ?>" href="<?= BASE_URL ?>public/reports.php">รายงาน</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link <?= $currentPage === 'settings.php' ? 'active' : '' ?>" href="<?= BASE_URL ?>public/settings.php">ตั้งค่าระบบ</a>
+                </li>
                 <?php endif; ?>
             </ul>
             <span class="navbar-text text-white me-3">
