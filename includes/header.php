@@ -41,11 +41,13 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                 <li class="nav-item">
                     <a class="nav-link <?= $currentPage === 'reports.php' ? 'active' : '' ?>" href="<?= BASE_URL ?>public/reports.php">รายงาน</a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link <?= $currentPage === 'settings.php' ? 'active' : '' ?>" href="<?= BASE_URL ?>public/settings.php">ตั้งค่าระบบ</a>
-                </li>
                 <?php endif; ?>
             </ul>
+            <?php if (isAdmin()): ?>
+            <a href="<?= BASE_URL ?>public/settings.php" class="btn btn-outline-light btn-sm me-3 <?= $currentPage === 'settings.php' ? 'active' : '' ?>" title="ตั้งค่าระบบ">
+                <i class="bi bi-gear"></i>
+            </a>
+            <?php endif; ?>
             <span class="navbar-text text-white me-3">
                 <i class="bi bi-person-circle"></i> <?= htmlspecialchars($user['full_name']) ?>
                 (<?= $user['role'] === 'admin' ? 'ผู้ดูแลระบบ' : 'เจ้าหน้าที่' ?>)
