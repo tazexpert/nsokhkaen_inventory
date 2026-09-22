@@ -1,5 +1,6 @@
-/vendor/
 /uploads/*
 !/uploads/.gitkeep
 .env
 *.log
+/libs/phpqrcode/cache/*
+!/libs/phpqrcode/cache/.gitkeep

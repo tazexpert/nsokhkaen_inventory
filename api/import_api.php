@@ -6,7 +6,7 @@ require_once __DIR__ . '/../includes/functions.php';
 requireAdminApi();
 $pdo = getDbConnection();
 
-use PhpOffice\PhpSpreadsheet\IOFactory;
+use Shuchkin\SimpleXLSX;
 
 $type = $_POST['type'] ?? '';
 if (!in_array($type, ['material', 'asset'], true)) {
@@ -17,13 +17,11 @@ if (!isset($_FILES['excel_file']) || $_FILES['excel_file']['error'] !== UPLOAD_E
     jsonResponse(['success' => false, 'message' => 'กรุณาเลือกไฟล์ Excel ที่ต้องการนำเข้า'], 422);
 }
 
-try {
-    $spreadsheet = IOFactory::load($_FILES['excel_file']['tmp_name']);
-    $sheet = $spreadsheet->getActiveSheet();
-    $rows = $sheet->toArray(null, true, true, false);
-} catch (Throwable $e) {
-    jsonResponse(['success' => false, 'message' => 'ไม่สามารถอ่านไฟล์ Excel ได้: ' . $e->getMessage()], 422);
+$xlsx = SimpleXLSX::parse($_FILES['excel_file']['tmp_name']);
+if (!$xlsx) {
+    jsonResponse(['success' => false, 'message' => 'ไม่สามารถอ่านไฟล์ Excel ได้: ' . SimpleXLSX::parseError()], 422);
 }
+$rows = $xlsx->rows();
 
 if (count($rows) < 2) {
     jsonResponse(['success' => false, 'message' => 'ไฟล์ไม่มีข้อมูล'], 422);

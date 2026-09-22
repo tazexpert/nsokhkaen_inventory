@@ -3,10 +3,10 @@
 define('BASE_URL', '/');
 define('APP_NAME', 'ระบบบริหารจัดการวัสดุและครุภัณฑ์ สำนักงานสถิติจังหวัดขอนแก่น');
 
-// Composer autoload (PhpSpreadsheet, endroid/qr-code)
-if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
-    require_once __DIR__ . '/../vendor/autoload.php';
-}
+// Bundled third-party libraries (no Composer required - plain PHP files under /libs)
+require_once __DIR__ . '/../libs/simplexlsx/SimpleXLSX.php';
+require_once __DIR__ . '/../libs/simplexlsx/SimpleXLSXGen.php';
+require_once __DIR__ . '/../libs/phpqrcode/qrlib.php';
 
 require_once __DIR__ . '/database.php';
 

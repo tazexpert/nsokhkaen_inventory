@@ -1,11 +1,9 @@
 <?php
 // Renders a single QR code image (PNG) for a given payload string.
+// Uses the bundled phpqrcode library (libs/phpqrcode) - no Composer required.
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../includes/auth.php';
 requireLogin();
-
-use Endroid\QrCode\QrCode;
-use Endroid\QrCode\Writer\PngWriter;
 
 $data = $_GET['data'] ?? '';
 if ($data === '') {
@@ -13,12 +11,5 @@ if ($data === '') {
     exit('missing data');
 }
 
-$qrCode = new QrCode($data);
-$qrCode->setSize(300);
-$qrCode->setMargin(5);
-
-$writer = new PngWriter();
-$result = $writer->write($qrCode);
-
-header('Content-Type: ' . $result->getMimeType());
-echo $result->getString();
+header('Content-Type: image/png');
+QRcode::png($data, false, QR_ECLEVEL_L, 6, 2);

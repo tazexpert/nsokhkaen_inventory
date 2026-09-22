@@ -97,7 +97,7 @@ $categories = $pdo->query("SELECT * FROM categories WHERE item_type = 'material'
                 <p class="text-muted">คอลัมน์ที่ต้องมี: name, category_id (ไม่บังคับ), unit, stock_qty, min_stock, storage_location, note</p>
                 <form id="importForm" enctype="multipart/form-data">
                     <input type="hidden" name="type" value="material">
-                    <input type="file" name="excel_file" accept=".xlsx,.xls,.csv" class="form-control" required>
+                    <input type="file" name="excel_file" accept=".xlsx" class="form-control" required>
                 </form>
                 <div id="importResult" class="mt-3"></div>
             </div>

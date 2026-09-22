@@ -99,33 +99,18 @@ function buildReportData(PDO $pdo, string $keyword, string $startDate, string $e
 
 function exportReportExcel(array $data): void
 {
-    $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
-    $sheet = $spreadsheet->getActiveSheet();
-    $sheet->setTitle('รายงาน');
+    $rows = [['ประเภท', 'ชื่อรายการ', 'จำนวนที่เบิก/ยืมในช่วงเวลา', 'ยอดคงเหลือ/สถานะปัจจุบัน']];
 
-    $sheet->setCellValue('A1', 'ประเภท');
-    $sheet->setCellValue('B1', 'ชื่อรายการ');
-    $sheet->setCellValue('C1', 'จำนวนที่เบิก/ยืมในช่วงเวลา');
-    $sheet->setCellValue('D1', 'ยอดคงเหลือ/สถานะปัจจุบัน');
-
-    $row = 2;
     foreach ($data as $r) {
-        $sheet->setCellValue("A$row", $r['item_type'] === 'material' ? 'วัสดุสิ้นเปลือง' : 'ครุภัณฑ์');
-        $sheet->setCellValue("B$row", $r['name']);
-        $sheet->setCellValue("C$row", $r['tx_quantity']);
-        $sheet->setCellValue("D$row", $r['balance']);
-        $row++;
+        $rows[] = [
+            $r['item_type'] === 'material' ? 'วัสดุสิ้นเปลือง' : 'ครุภัณฑ์',
+            $r['name'],
+            $r['tx_quantity'],
+            $r['balance'],
+        ];
     }
 
-    foreach (range('A', 'D') as $col) {
-        $sheet->getColumnDimension($col)->setAutoSize(true);
-    }
-
-    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    header('Content-Disposition: attachment;filename="report_' . date('Ymd_His') . '.xlsx"');
-    header('Cache-Control: max-age=0');
-
-    $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-    $writer->save('php://output');
+    \Shuchkin\SimpleXLSXGen::fromArray($rows, 'รายงาน')
+        ->downloadAs('report_' . date('Ymd_His') . '.xlsx');
     exit;
 }
