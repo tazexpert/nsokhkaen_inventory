@@ -13,6 +13,7 @@ function loadMaterials(keyword = '') {
                     <td>${m.category_name || '-'}</td>
                     <td class="${lowStock ? 'text-danger fw-bold' : ''}">${m.stock_qty}</td>
                     <td>${m.unit}</td>
+                    <td>${Number(m.unit_cost).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
                     <td>${m.storage_location || '-'}</td>
                     <td class="text-end">
                         <button class="btn btn-sm btn-outline-primary" onclick="editMaterial(${m.id})"><i class="bi bi-pencil"></i></button>
@@ -37,6 +38,7 @@ function editMaterial(id) {
         $('#m_name').val(m.name);
         $('#m_category_id').val(m.category_id || '');
         $('#m_unit').val(m.unit);
+        $('#m_unit_cost').val(m.unit_cost);
         $('#m_stock_qty').val(m.stock_qty).prop('disabled', true);
         $('#m_min_stock').val(m.min_stock);
         $('#m_storage_location').val(m.storage_location);
@@ -54,6 +56,7 @@ function saveMaterial() {
         name: $('#m_name').val(),
         category_id: $('#m_category_id').val(),
         unit: $('#m_unit').val(),
+        unit_cost: $('#m_unit_cost').val(),
         stock_qty: $('#m_stock_qty').val(),
         min_stock: $('#m_min_stock').val(),
         storage_location: $('#m_storage_location').val(),

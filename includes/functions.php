@@ -16,10 +16,19 @@ function generateNextCode(PDO $pdo, string $table, string $column, string $prefi
     return $prefix . '-' . str_pad((string) $nextNumber, 4, '0', STR_PAD_LEFT);
 }
 
-// QR payload is simply the unique code; the scanner reads it back as plain text
+// Unique code stored in the qr_code column and used as the lookup key
 function generateQrPayload(string $code): string
 {
     return $code . '-' . substr(bin2hex(random_bytes(3)), 0, 6);
+}
+
+// The actual content encoded into the printed QR image: a direct link to the
+// scan page. Any phone camera app can open this - it does not need our own
+// in-page scanner. If the user is not logged in, scan.php requires login
+// first and returns here afterwards (see requireLogin() in includes/auth.php).
+function buildQrScanUrl(string $qrCode): string
+{
+    return APP_URL . 'public/scan.php?qr=' . urlencode($qrCode);
 }
 
 function jsonResponse(array $data, int $statusCode = 200): void

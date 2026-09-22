@@ -2,7 +2,8 @@
 require_once __DIR__ . '/../config/config.php';
 
 if (isset($_SESSION['user'])) {
-    header('Location: dashboard.php');
+    header('Location: ' . (empty($_SESSION['redirect_after_login']) ? 'dashboard.php' : $_SESSION['redirect_after_login']));
+    unset($_SESSION['redirect_after_login']);
     exit;
 }
 
@@ -27,7 +28,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'full_name' => $row['full_name'],
                 'role' => $row['role'],
             ];
-            header('Location: dashboard.php');
+            $redirect = empty($_SESSION['redirect_after_login']) ? 'dashboard.php' : $_SESSION['redirect_after_login'];
+            unset($_SESSION['redirect_after_login']);
+            header('Location: ' . $redirect);
             exit;
         }
 

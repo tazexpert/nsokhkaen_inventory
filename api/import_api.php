@@ -52,15 +52,16 @@ try {
             $code = generateNextCode($pdo, 'materials', 'material_code', 'MAT');
             $qr = generateQrPayload($code);
             $unit = trim((string) ($record['unit'] ?? 'ชิ้น')) ?: 'ชิ้น';
+            $unitCost = (float) ($record['unit_cost'] ?? 0);
             $stockQty = (int) ($record['stock_qty'] ?? 0);
             $minStock = (int) ($record['min_stock'] ?? 0);
 
             $stmt = $pdo->prepare("INSERT INTO materials
-                (material_code, qr_code, name, category_id, unit, stock_qty, min_stock, storage_location, note, created_by)
-                VALUES (:code, :qr, :name, :category_id, :unit, :stock_qty, :min_stock, :location, :note, :created_by)");
+                (material_code, qr_code, name, category_id, unit, unit_cost, stock_qty, min_stock, storage_location, note, created_by)
+                VALUES (:code, :qr, :name, :category_id, :unit, :unit_cost, :stock_qty, :min_stock, :location, :note, :created_by)");
             $stmt->execute([
                 'code' => $code, 'qr' => $qr, 'name' => $name, 'category_id' => $categoryId,
-                'unit' => $unit, 'stock_qty' => $stockQty, 'min_stock' => $minStock,
+                'unit' => $unit, 'unit_cost' => $unitCost, 'stock_qty' => $stockQty, 'min_stock' => $minStock,
                 'location' => $storageLocation, 'note' => $note, 'created_by' => $_SESSION['user']['id'],
             ]);
         } else {

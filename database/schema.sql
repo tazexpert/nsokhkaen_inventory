@@ -43,6 +43,7 @@ CREATE TABLE materials (
     name VARCHAR(255) NOT NULL,
     category_id INT UNSIGNED NULL,
     unit VARCHAR(50) NOT NULL DEFAULT 'ชิ้น',
+    unit_cost DECIMAL(12,2) NOT NULL DEFAULT 0.00,
     stock_qty INT NOT NULL DEFAULT 0,
     min_stock INT NOT NULL DEFAULT 0,
     storage_location VARCHAR(255) NULL,
@@ -122,10 +123,10 @@ INSERT INTO categories (name, item_type) VALUES
 ('คอมพิวเตอร์และอุปกรณ์ต่อพ่วง', 'asset'),
 ('ครุภัณฑ์สำนักงาน', 'asset');
 
-INSERT INTO materials (material_code, qr_code, name, category_id, unit, stock_qty, min_stock, storage_location) VALUES
-('MAT-0001', 'MAT-QR-0001', 'ปากกาลูกลื่นสีน้ำเงิน', 1, 'ด้าม', 150, 20, 'ห้องพัสดุ ชั้น 1'),
-('MAT-0002', 'MAT-QR-0002', 'กระดาษ A4 80 แกรม', 2, 'รีม', 60, 10, 'ห้องพัสดุ ชั้น 1'),
-('MAT-0003', 'MAT-QR-0003', 'แฟ้มสันกว้าง', 2, 'เล่ม', 40, 5, 'ห้องพัสดุ ชั้น 1');
+INSERT INTO materials (material_code, qr_code, name, category_id, unit, unit_cost, stock_qty, min_stock, storage_location) VALUES
+('MAT-0001', 'MAT-QR-0001', 'ปากกาลูกลื่นสีน้ำเงิน', 1, 'ด้าม', 5.00, 150, 20, 'ห้องพัสดุ ชั้น 1'),
+('MAT-0002', 'MAT-QR-0002', 'กระดาษ A4 80 แกรม', 2, 'รีม', 115.00, 60, 10, 'ห้องพัสดุ ชั้น 1'),
+('MAT-0003', 'MAT-QR-0003', 'แฟ้มสันกว้าง', 2, 'เล่ม', 45.00, 40, 5, 'ห้องพัสดุ ชั้น 1');
 
 INSERT INTO assets (asset_code, qr_code, name, category_id, brand_model, serial_number, status, storage_location, acquired_date) VALUES
 ('AST-0001', 'AST-QR-0001', 'คอมพิวเตอร์ตั้งโต๊ะ', 3, 'Dell OptiPlex 3090', 'SN-DL-0001', 'available', 'ห้องปฏิบัติการ ชั้น 2', '2023-05-10'),

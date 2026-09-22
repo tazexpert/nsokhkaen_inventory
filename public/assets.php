@@ -104,6 +104,9 @@ $categories = $pdo->query("SELECT * FROM categories WHERE item_type = 'asset' OR
             </div>
             <div class="modal-body">
                 <p class="text-muted">คอลัมน์ที่ต้องมี: name, category_id (ไม่บังคับ), brand_model, serial_number, storage_location, acquired_date, note</p>
+                <a href="<?= BASE_URL ?>api/import_template.php?type=asset" class="btn btn-sm btn-outline-primary mb-3">
+                    <i class="bi bi-download"></i> ดาวน์โหลดแบบฟอร์มเปล่า (Excel)
+                </a>
                 <form id="importForm" enctype="multipart/form-data">
                     <input type="hidden" name="type" value="asset">
                     <input type="file" name="excel_file" accept=".xlsx" class="form-control" required>

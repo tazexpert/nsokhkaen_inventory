@@ -22,7 +22,7 @@ $categories = $pdo->query("SELECT * FROM categories WHERE item_type = 'material'
 <table class="table table-striped align-middle" id="materialsTable">
     <thead>
     <tr>
-        <th>รหัส</th><th>ชื่อวัสดุ</th><th>หมวดหมู่</th><th>คงเหลือ</th><th>หน่วย</th><th>ที่จัดเก็บ</th><th></th>
+        <th>รหัส</th><th>ชื่อวัสดุ</th><th>หมวดหมู่</th><th>คงเหลือ</th><th>หน่วย</th><th>ต้นทุน/หน่วย</th><th>ที่จัดเก็บ</th><th></th>
     </tr>
     </thead>
     <tbody></tbody>
@@ -63,9 +63,15 @@ $categories = $pdo->query("SELECT * FROM categories WHERE item_type = 'material'
                             <input type="number" class="form-control" id="m_stock_qty" value="0">
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">จุดสั่งซื้อขั้นต่ำ (แจ้งเตือน)</label>
-                        <input type="number" class="form-control" id="m_min_stock" value="0">
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label">ต้นทุน/หน่วย (บาท)</label>
+                            <input type="number" step="0.01" min="0" class="form-control" id="m_unit_cost" value="0">
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label">จุดสั่งซื้อขั้นต่ำ (แจ้งเตือน)</label>
+                            <input type="number" class="form-control" id="m_min_stock" value="0">
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">สถานที่จัดเก็บ</label>
@@ -94,7 +100,10 @@ $categories = $pdo->query("SELECT * FROM categories WHERE item_type = 'material'
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p class="text-muted">คอลัมน์ที่ต้องมี: name, category_id (ไม่บังคับ), unit, stock_qty, min_stock, storage_location, note</p>
+                <p class="text-muted">คอลัมน์ที่ต้องมี: name, category_id (ไม่บังคับ), unit, unit_cost, stock_qty, min_stock, storage_location, note</p>
+                <a href="<?= BASE_URL ?>api/import_template.php?type=material" class="btn btn-sm btn-outline-primary mb-3">
+                    <i class="bi bi-download"></i> ดาวน์โหลดแบบฟอร์มเปล่า (Excel)
+                </a>
                 <form id="importForm" enctype="multipart/form-data">
                     <input type="hidden" name="type" value="material">
                     <input type="file" name="excel_file" accept=".xlsx" class="form-control" required>

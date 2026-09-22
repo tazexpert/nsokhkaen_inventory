@@ -19,7 +19,12 @@ function isAdmin(): bool
 function requireLogin(): void
 {
     if (!isLoggedIn()) {
-        header('Location: ' . BASE_URL . 'index.php');
+        // Remember the page the user was trying to reach (e.g. a QR code deep
+        // link to scan.php?qr=...) so we can send them back there after login.
+        if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_SERVER['REQUEST_URI'])) {
+            $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
+        }
+        header('Location: ' . BASE_URL . 'public/index.php');
         exit;
     }
 }

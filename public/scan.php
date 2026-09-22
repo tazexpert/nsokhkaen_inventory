@@ -31,6 +31,7 @@
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
 const API_URL = '<?= BASE_URL ?>api/scan_api.php';
+const QR_FROM_LINK = <?= json_encode($_GET['qr'] ?? '') ?>;
 let html5QrCode = null;
 let scanning = false;
 
@@ -183,6 +184,13 @@ function doReturn(assetId) {
             $('#resultCard').addClass('d-none');
         })
         .fail((xhr) => showAlert(xhr.responseJSON?.message || 'เกิดข้อผิดพลาด'));
+}
+
+// Opened directly from a printed QR code sticker (scan.php?qr=...) - look it up
+// immediately instead of waiting for the camera or manual entry.
+if (QR_FROM_LINK) {
+    $('#manualQr').val(QR_FROM_LINK);
+    $(document).ready(() => lookupQr(QR_FROM_LINK));
 }
 </script>
 

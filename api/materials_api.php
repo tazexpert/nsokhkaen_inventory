@@ -62,6 +62,7 @@ function createMaterial(PDO $pdo, array $user): void
     $name = sanitizeString($_POST['name'] ?? '');
     $categoryId = $_POST['category_id'] !== '' ? (int) $_POST['category_id'] : null;
     $unit = sanitizeString($_POST['unit'] ?? 'ชิ้น');
+    $unitCost = (float) ($_POST['unit_cost'] ?? 0);
     $stockQty = (int) ($_POST['stock_qty'] ?? 0);
     $minStock = (int) ($_POST['min_stock'] ?? 0);
     $location = sanitizeString($_POST['storage_location'] ?? '');
@@ -71,18 +72,23 @@ function createMaterial(PDO $pdo, array $user): void
         jsonResponse(['success' => false, 'message' => 'กรุณาระบุชื่อวัสดุ'], 422);
     }
 
+    if ($unitCost < 0) {
+        jsonResponse(['success' => false, 'message' => 'ต้นทุน/หน่วยต้องไม่ติดลบ'], 422);
+    }
+
     $code = generateNextCode($pdo, 'materials', 'material_code', 'MAT');
     $qr = generateQrPayload($code);
 
     $stmt = $pdo->prepare("INSERT INTO materials
-        (material_code, qr_code, name, category_id, unit, stock_qty, min_stock, storage_location, note, created_by)
-        VALUES (:code, :qr, :name, :category_id, :unit, :stock_qty, :min_stock, :location, :note, :created_by)");
+        (material_code, qr_code, name, category_id, unit, unit_cost, stock_qty, min_stock, storage_location, note, created_by)
+        VALUES (:code, :qr, :name, :category_id, :unit, :unit_cost, :stock_qty, :min_stock, :location, :note, :created_by)");
     $stmt->execute([
         'code' => $code,
         'qr' => $qr,
         'name' => $name,
         'category_id' => $categoryId,
         'unit' => $unit,
+        'unit_cost' => $unitCost,
         'stock_qty' => $stockQty,
         'min_stock' => $minStock,
         'location' => $location ?: null,
@@ -99,6 +105,7 @@ function updateMaterial(PDO $pdo): void
     $name = sanitizeString($_POST['name'] ?? '');
     $categoryId = $_POST['category_id'] !== '' ? (int) $_POST['category_id'] : null;
     $unit = sanitizeString($_POST['unit'] ?? 'ชิ้น');
+    $unitCost = (float) ($_POST['unit_cost'] ?? 0);
     $minStock = (int) ($_POST['min_stock'] ?? 0);
     $location = sanitizeString($_POST['storage_location'] ?? '');
     $note = sanitizeString($_POST['note'] ?? '');
@@ -107,12 +114,17 @@ function updateMaterial(PDO $pdo): void
         jsonResponse(['success' => false, 'message' => 'ข้อมูลไม่ถูกต้อง'], 422);
     }
 
+    if ($unitCost < 0) {
+        jsonResponse(['success' => false, 'message' => 'ต้นทุน/หน่วยต้องไม่ติดลบ'], 422);
+    }
+
     $stmt = $pdo->prepare("UPDATE materials SET name = :name, category_id = :category_id, unit = :unit,
-        min_stock = :min_stock, storage_location = :location, note = :note WHERE id = :id");
+        unit_cost = :unit_cost, min_stock = :min_stock, storage_location = :location, note = :note WHERE id = :id");
     $stmt->execute([
         'name' => $name,
         'category_id' => $categoryId,
         'unit' => $unit,
+        'unit_cost' => $unitCost,
         'min_stock' => $minStock,
         'location' => $location ?: null,
         'note' => $note ?: null,

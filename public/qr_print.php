@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/functions.php';
 requireAdmin();
 
 $pdo = getDbConnection();
@@ -45,7 +46,7 @@ if ($type === 'asset') {
 <div class="grid">
     <?php foreach ($items as $item): ?>
         <div class="sticker">
-            <img src="qr_image.php?data=<?= urlencode($item['qr_code']) ?>" alt="QR">
+            <img src="qr_image.php?data=<?= urlencode(buildQrScanUrl($item['qr_code'])) ?>" alt="QR">
             <div class="code"><?= htmlspecialchars($item['code']) ?></div>
             <div class="name"><?= htmlspecialchars($item['name']) ?></div>
         </div>
