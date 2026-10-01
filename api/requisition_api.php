@@ -5,6 +5,13 @@
  * office's paper form. Every line is still recorded into
  * material_transactions / asset_transactions as before (with a
  * requisition_id back-reference) so existing reports keep working.
+ *
+ * The in-progress slip (draft) is kept in the PHP session, not just in
+ * JavaScript memory. A phone's own QR scanner app (not our in-browser
+ * camera, which many mobile browsers block on plain http://) opens each
+ * scanned sticker's link as a brand-new page load of scan.php?qr=... -
+ * a JS-only cart would be wiped out by that. Session storage survives
+ * across those separate page loads as long as the login session does.
  */
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../includes/auth.php';
@@ -15,6 +22,22 @@ $pdo = getDbConnection();
 $action = $_REQUEST['action'] ?? '';
 
 switch ($action) {
+    case 'cart_get':
+        jsonResponse(['success' => true, 'data' => getDraft()]);
+        break;
+    case 'cart_add_material':
+        cartAddMaterial($pdo);
+        break;
+    case 'cart_add_asset':
+        cartAddAsset($pdo);
+        break;
+    case 'cart_remove':
+        cartRemove();
+        break;
+    case 'cart_clear':
+        clearDraft();
+        jsonResponse(['success' => true, 'data' => getDraft()]);
+        break;
     case 'create':
         createRequisition($pdo, $user);
         break;
@@ -28,14 +51,137 @@ switch ($action) {
         jsonResponse(['success' => false, 'message' => 'ไม่พบคำสั่งที่ร้องขอ'], 400);
 }
 
+function getDraft(): array
+{
+    return $_SESSION['requisition_draft'] ?? ['purpose' => '', 'requester_name' => '', 'requester_position' => '', 'items' => []];
+}
+
+function saveDraftMeta(): void
+{
+    $draft = getDraft();
+    $draft['purpose'] = sanitizeString($_POST['purpose'] ?? $draft['purpose']);
+    $draft['requester_name'] = sanitizeString($_POST['requester_name'] ?? $draft['requester_name']);
+    $draft['requester_position'] = sanitizeString($_POST['requester_position'] ?? $draft['requester_position']);
+    $_SESSION['requisition_draft'] = $draft;
+}
+
+function clearDraft(): void
+{
+    unset($_SESSION['requisition_draft']);
+}
+
+function cartAddMaterial(PDO $pdo): void
+{
+    $materialId = (int) ($_POST['material_id'] ?? 0);
+    $quantity = (int) ($_POST['quantity'] ?? 0);
+    $note = sanitizeString($_POST['note'] ?? '');
+
+    if (!$materialId || $quantity <= 0) {
+        jsonResponse(['success' => false, 'message' => 'กรุณาระบุจำนวนที่ต้องการเบิกให้ถูกต้อง'], 422);
+    }
+
+    $stmt = $pdo->prepare('SELECT * FROM materials WHERE id = :id');
+    $stmt->execute(['id' => $materialId]);
+    $material = $stmt->fetch();
+    if (!$material) {
+        jsonResponse(['success' => false, 'message' => 'ไม่พบข้อมูลวัสดุ'], 404);
+    }
+
+    saveDraftMeta();
+    $draft = getDraft();
+
+    $alreadyInCart = 0;
+    foreach ($draft['items'] as $item) {
+        if ($item['item_type'] === 'material' && $item['id'] === $materialId) {
+            $alreadyInCart += $item['quantity'];
+        }
+    }
+
+    if ($alreadyInCart + $quantity > $material['stock_qty']) {
+        jsonResponse(['success' => false, 'message' => "สต๊อก \"{$material['name']}\" คงเหลือไม่เพียงพอ (คงเหลือ {$material['stock_qty']} {$material['unit']}, อยู่ในใบเบิกแล้ว {$alreadyInCart})"], 422);
+    }
+
+    $draft['items'][] = [
+        'item_type' => 'material',
+        'id' => $materialId,
+        'name' => $material['name'],
+        'unit' => $material['unit'],
+        'quantity' => $quantity,
+        'note' => $note,
+        'display' => "{$quantity} {$material['unit']}",
+    ];
+    $_SESSION['requisition_draft'] = $draft;
+
+    jsonResponse(['success' => true, 'data' => $draft]);
+}
+
+function cartAddAsset(PDO $pdo): void
+{
+    $assetId = (int) ($_POST['asset_id'] ?? 0);
+    $note = sanitizeString($_POST['note'] ?? '');
+
+    if (!$assetId) {
+        jsonResponse(['success' => false, 'message' => 'ข้อมูลไม่ถูกต้อง'], 422);
+    }
+
+    $stmt = $pdo->prepare('SELECT * FROM assets WHERE id = :id');
+    $stmt->execute(['id' => $assetId]);
+    $asset = $stmt->fetch();
+    if (!$asset) {
+        jsonResponse(['success' => false, 'message' => 'ไม่พบข้อมูลครุภัณฑ์'], 404);
+    }
+    if ($asset['status'] !== 'available') {
+        jsonResponse(['success' => false, 'message' => "\"{$asset['name']}\" ไม่สามารถยืมได้ในขณะนี้ (สถานะ: {$asset['status']})"], 422);
+    }
+
+    saveDraftMeta();
+    $draft = getDraft();
+
+    foreach ($draft['items'] as $item) {
+        if ($item['item_type'] === 'asset' && $item['id'] === $assetId) {
+            jsonResponse(['success' => false, 'message' => "\"{$asset['name']}\" อยู่ในใบเบิกนี้แล้ว"], 422);
+        }
+    }
+
+    $draft['items'][] = [
+        'item_type' => 'asset',
+        'id' => $assetId,
+        'name' => $asset['name'],
+        'unit' => null,
+        'quantity' => 1,
+        'note' => $note,
+        'display' => 'ยืม 1 รายการ',
+    ];
+    $_SESSION['requisition_draft'] = $draft;
+
+    jsonResponse(['success' => true, 'data' => $draft]);
+}
+
+function cartRemove(): void
+{
+    $index = (int) ($_POST['index'] ?? -1);
+    $draft = getDraft();
+
+    if (!isset($draft['items'][$index])) {
+        jsonResponse(['success' => false, 'message' => 'ไม่พบรายการที่ต้องการลบ'], 422);
+    }
+
+    array_splice($draft['items'], $index, 1);
+    $_SESSION['requisition_draft'] = $draft;
+
+    jsonResponse(['success' => true, 'data' => $draft]);
+}
+
 function createRequisition(PDO $pdo, array $user): void
 {
-    $purpose = sanitizeString($_POST['purpose'] ?? '');
-    $requesterName = sanitizeString($_POST['requester_name'] ?? '');
-    $requesterPosition = sanitizeString($_POST['requester_position'] ?? '');
-    $items = json_decode($_POST['items'] ?? '[]', true);
+    saveDraftMeta();
+    $draft = getDraft();
+    $purpose = $draft['purpose'];
+    $requesterName = $draft['requester_name'];
+    $requesterPosition = $draft['requester_position'];
+    $items = $draft['items'];
 
-    if (!is_array($items) || count($items) === 0) {
+    if (count($items) === 0) {
         jsonResponse(['success' => false, 'message' => 'กรุณาสแกนหรือเพิ่มรายการอย่างน้อย 1 รายการ'], 422);
     }
 
@@ -157,6 +303,7 @@ function createRequisition(PDO $pdo, array $user): void
         }
 
         $pdo->commit();
+        clearDraft();
 
         jsonResponse([
             'success' => true,

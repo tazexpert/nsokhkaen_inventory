@@ -1,4 +1,12 @@
-<?php require_once __DIR__ . '/../includes/header.php'; ?>
+<?php
+require_once __DIR__ . '/../includes/header.php';
+
+// Render the in-progress slip straight from the session on every page load,
+// including the ones triggered by scanning another sticker with the phone's
+// own camera/QR app (each such scan opens scan.php?qr=... as a fresh page -
+// a JS-only cart would be wiped out by that; session storage survives it).
+$draft = $_SESSION['requisition_draft'] ?? ['purpose' => '', 'requester_name' => '', 'requester_position' => '', 'items' => []];
+?>
 
 <h3 class="mb-4">สแกน QR Code เพื่อเบิก/ยืม/คืน</h3>
 
@@ -10,6 +18,10 @@
                 <button id="btnToggleScan" class="btn btn-primary mt-3">
                     <i class="bi bi-camera"></i> เปิดกล้องสแกน
                 </button>
+                <p class="text-muted small mt-2 mb-0">
+                    ถ้าเปิดกล้องในเบราว์เซอร์ไม่ได้ (เช่น ไม่ได้ใช้ HTTPS) ให้ใช้แอปกล้อง/สแกน QR ของเครื่องแทน
+                    สแกนสติ๊กเกอร์แล้วรายการจะถูกเพิ่มลงใบเบิกนี้ให้อัตโนมัติ
+                </p>
                 <hr>
                 <div class="input-group">
                     <input type="text" id="manualQr" class="form-control" placeholder="หรือกรอกรหัส QR ด้วยตนเอง">
@@ -19,30 +31,29 @@
         </div>
 
         <div class="card mt-4">
-            <div class="card-header">
-                <i class="bi bi-cart"></i> รายการในใบเบิกปัจจุบัน (<span id="cartCount">0</span>)
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-cart"></i> รายการในใบเบิกปัจจุบัน (<span id="cartCount"><?= count($draft['items']) ?></span>)</span>
+                <button class="btn btn-sm btn-outline-secondary" onclick="clearCart()" title="ล้างรายการทั้งหมด"><i class="bi bi-x-circle"></i></button>
             </div>
             <div class="card-body p-0">
                 <table class="table table-sm mb-0">
                     <thead><tr><th>รายการ</th><th>จำนวน</th><th></th></tr></thead>
-                    <tbody id="cartBody">
-                        <tr id="cartEmptyRow"><td colspan="3" class="text-center text-muted py-3">ยังไม่มีรายการ — สแกนแล้วกด "เพิ่มลงใบเบิก"</td></tr>
-                    </tbody>
+                    <tbody id="cartBody"></tbody>
                 </table>
             </div>
-            <div class="card-body border-top" id="cartFormWrapper" style="display:none;">
+            <div class="card-body border-top" id="cartFormWrapper" style="<?= $draft['items'] ? '' : 'display:none;' ?>">
                 <div class="mb-2">
                     <label class="form-label">ขอเบิกวัสดุ/ครุภัณฑ์เพื่อใช้งาน</label>
-                    <input type="text" class="form-control" id="req_purpose" placeholder="เช่น ใช้ในงานประชุม...">
+                    <input type="text" class="form-control" id="req_purpose" value="<?= htmlspecialchars($draft['purpose']) ?>" placeholder="เช่น ใช้ในงานประชุม...">
                 </div>
                 <div class="row">
                     <div class="col-7 mb-2">
                         <label class="form-label">ชื่อผู้เบิก</label>
-                        <input type="text" class="form-control" id="req_requester_name">
+                        <input type="text" class="form-control" id="req_requester_name" value="<?= htmlspecialchars($draft['requester_name']) ?>">
                     </div>
                     <div class="col-5 mb-2">
                         <label class="form-label">ตำแหน่ง</label>
-                        <input type="text" class="form-control" id="req_requester_position">
+                        <input type="text" class="form-control" id="req_requester_position" value="<?= htmlspecialchars($draft['requester_position']) ?>">
                     </div>
                 </div>
                 <button class="btn btn-primary w-100" onclick="submitRequisition()">
@@ -70,7 +81,6 @@ const PRINT_URL = '<?= BASE_URL ?>public/requisition_print.php';
 const QR_FROM_LINK = <?= json_encode($_GET['qr'] ?? '') ?>;
 let html5QrCode = null;
 let scanning = false;
-let cart = []; // { item_type, id, name, unit, quantity, note, maxQty }
 
 function showAlert(message, type = 'danger') {
     $('#alertBox').html(`<div class="alert alert-${type} mt-3">${message}</div>`);
@@ -104,7 +114,7 @@ $('#btnToggleScan').on('click', function () {
         scanning = true;
         $('#btnToggleScan').html('<i class="bi bi-stop-circle"></i> หยุดสแกน');
     }).catch((err) => {
-        showAlert('ไม่สามารถเปิดกล้องได้: ' + err);
+        showAlert('ไม่สามารถเปิดกล้องได้: ' + err + ' — ลองใช้แอปกล้อง/สแกน QR ของเครื่องแทน');
     });
 });
 
@@ -151,13 +161,13 @@ function renderMaterial(m) {
             <label class="form-label">หมายเหตุ</label>
             <input type="text" class="form-control" id="withdrawNote">
         </div>
-        <button class="btn btn-primary" onclick='addMaterialToCart(${JSON.stringify(m)})'>
+        <button class="btn btn-primary" onclick="addMaterialToCart(${m.id})">
             <i class="bi bi-cart-plus"></i> เพิ่มลงใบเบิก
         </button>
     `);
 }
 
-function addMaterialToCart(m) {
+function addMaterialToCart(materialId) {
     const quantity = parseInt($('#withdrawQty').val(), 10) || 0;
     const note = $('#withdrawNote').val();
 
@@ -166,17 +176,21 @@ function addMaterialToCart(m) {
         return;
     }
 
-    const alreadyInCart = cart.filter((c) => c.item_type === 'material' && c.id === m.id)
-        .reduce((sum, c) => sum + c.quantity, 0);
-    if (alreadyInCart + quantity > m.stock_qty) {
-        showAlert(`สต๊อก "${m.name}" คงเหลือไม่เพียงพอ (คงเหลือ ${m.stock_qty} ${m.unit}, อยู่ในใบเบิกแล้ว ${alreadyInCart})`);
-        return;
-    }
-
-    cart.push({ item_type: 'material', id: m.id, name: m.name, unit: m.unit, quantity, note, display: `${quantity} ${m.unit}` });
-    renderCart();
-    $('#resultCard').addClass('d-none');
-    $('#alertBox').empty();
+    $.post(REQ_API_URL, {
+        action: 'cart_add_material',
+        material_id: materialId,
+        quantity,
+        note,
+        purpose: $('#req_purpose').val(),
+        requester_name: $('#req_requester_name').val(),
+        requester_position: $('#req_requester_position').val(),
+    })
+        .done((res) => {
+            renderCart(res.data.items);
+            $('#resultCard').addClass('d-none');
+            $('#alertBox').empty();
+        })
+        .fail((xhr) => showAlert(xhr.responseJSON?.message || 'เกิดข้อผิดพลาด'));
 }
 
 function renderAsset(a) {
@@ -189,7 +203,7 @@ function renderAsset(a) {
                 <label class="form-label">หมายเหตุ</label>
                 <input type="text" class="form-control" id="borrowNote">
             </div>
-            <button class="btn btn-warning" onclick='addAssetToCart(${JSON.stringify(a)})'>
+            <button class="btn btn-warning" onclick="addAssetToCart(${a.id})">
                 <i class="bi bi-cart-plus"></i> เพิ่มลงใบเบิก (ยืม)
             </button>
         `;
@@ -214,36 +228,48 @@ function renderAsset(a) {
     `);
 }
 
-function addAssetToCart(a) {
+function addAssetToCart(assetId) {
     const note = $('#borrowNote').val();
 
-    if (cart.some((c) => c.item_type === 'asset' && c.id === a.id)) {
-        showAlert(`"${a.name}" อยู่ในใบเบิกนี้แล้ว`);
-        return;
-    }
-
-    cart.push({ item_type: 'asset', id: a.id, name: a.name, unit: null, quantity: 1, note, display: 'ยืม 1 รายการ' });
-    renderCart();
-    $('#resultCard').addClass('d-none');
-    $('#alertBox').empty();
+    $.post(REQ_API_URL, {
+        action: 'cart_add_asset',
+        asset_id: assetId,
+        note,
+        purpose: $('#req_purpose').val(),
+        requester_name: $('#req_requester_name').val(),
+        requester_position: $('#req_requester_position').val(),
+    })
+        .done((res) => {
+            renderCart(res.data.items);
+            $('#resultCard').addClass('d-none');
+            $('#alertBox').empty();
+        })
+        .fail((xhr) => showAlert(xhr.responseJSON?.message || 'เกิดข้อผิดพลาด'));
 }
 
 function removeFromCart(index) {
-    cart.splice(index, 1);
-    renderCart();
+    $.post(REQ_API_URL, { action: 'cart_remove', index })
+        .done((res) => renderCart(res.data.items))
+        .fail((xhr) => showAlert(xhr.responseJSON?.message || 'เกิดข้อผิดพลาด'));
 }
 
-function renderCart() {
-    $('#cartCount').text(cart.length);
+function clearCart() {
+    if (!confirm('ล้างรายการในใบเบิกปัจจุบันทั้งหมด?')) return;
+    $.post(REQ_API_URL, { action: 'cart_clear' })
+        .done((res) => renderCart(res.data.items));
+}
+
+function renderCart(items) {
+    $('#cartCount').text(items.length);
     const tbody = $('#cartBody').empty();
 
-    if (cart.length === 0) {
+    if (items.length === 0) {
         tbody.append('<tr id="cartEmptyRow"><td colspan="3" class="text-center text-muted py-3">ยังไม่มีรายการ — สแกนแล้วกด "เพิ่มลงใบเบิก"</td></tr>');
         $('#cartFormWrapper').hide();
         return;
     }
 
-    cart.forEach((item, index) => {
+    items.forEach((item, index) => {
         tbody.append(`
             <tr>
                 <td>${item.name}${item.item_type === 'asset' ? ' <span class="badge bg-success">ครุภัณฑ์</span>' : ''}</td>
@@ -258,14 +284,11 @@ function renderCart() {
 }
 
 function submitRequisition() {
-    if (cart.length === 0) return;
-
     const payload = {
         action: 'create',
         purpose: $('#req_purpose').val(),
         requester_name: $('#req_requester_name').val(),
         requester_position: $('#req_requester_position').val(),
-        items: JSON.stringify(cart.map((c) => ({ item_type: c.item_type, id: c.id, quantity: c.quantity, note: c.note }))),
     };
 
     $.post(REQ_API_URL, payload)
@@ -278,8 +301,7 @@ function submitRequisition() {
                     </a>
                 </div>
             `);
-            cart = [];
-            renderCart();
+            renderCart([]);
             $('#req_purpose, #req_requester_name, #req_requester_position').val('');
         })
         .fail((xhr) => showAlert(xhr.responseJSON?.message || 'เกิดข้อผิดพลาด'));
@@ -294,6 +316,11 @@ function doReturn(assetId) {
         })
         .fail((xhr) => showAlert(xhr.responseJSON?.message || 'เกิดข้อผิดพลาด'));
 }
+
+// Initial cart state, rendered server-side from the session (works even if
+// this page load came from scanning another sticker with the phone's own
+// camera app, which opens scan.php?qr=... as a brand-new page).
+renderCart(<?= json_encode(array_values($draft['items'])) ?>);
 
 // Opened directly from a printed QR code sticker (scan.php?qr=...) - look it up
 // immediately instead of waiting for the camera or manual entry.
