@@ -115,7 +115,11 @@ $storageLocations = $pdo->query('SELECT * FROM storage_locations ORDER BY name')
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p class="text-muted">คอลัมน์ที่ต้องมี: name, category_id (ไม่บังคับ), unit, unit_cost, stock_qty, min_stock, storage_location, note</p>
+                <p class="text-muted mb-1">รองรับ 2 รูปแบบไฟล์ - ระบบตรวจจับอัตโนมัติ:</p>
+                <ul class="text-muted small">
+                    <li>แบบฟอร์มของระบบ: คอลัมน์ name, category_id (ไม่บังคับ), unit, unit_cost, stock_qty, min_stock, storage_location, note</li>
+                    <li>แบบฟอร์ม "รายละเอียดพัสดุ" ของสำนักงาน (ลำดับที่ / รายละเอียดของพัสดุ / ราคาที่ได้มาจากการสืบราคา(หน่วยละ) / จำนวน(หน่วย)) - ใช้ไฟล์เดิมได้เลยโดยไม่ต้องปรับคอลัมน์</li>
+                </ul>
                 <a href="<?= BASE_URL ?>api/import_template.php?type=material" class="btn btn-sm btn-outline-primary mb-3">
                     <i class="bi bi-download"></i> ดาวน์โหลดแบบฟอร์มเปล่า (Excel)
                 </a>
