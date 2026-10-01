@@ -96,19 +96,54 @@ CREATE TABLE assets (
 ) ENGINE=InnoDB;
 
 -- ------------------------------------------------------------
+-- Requisitions (ใบเบิกวัสดุ) - one slip can cover several materials
+-- and/or assets scanned in a row, matching the office's paper form
+-- ------------------------------------------------------------
+CREATE TABLE requisitions (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    requisition_no VARCHAR(50) NOT NULL UNIQUE,
+    purpose VARCHAR(255) NULL,
+    requester_name VARCHAR(150) NULL,
+    requester_position VARCHAR(150) NULL,
+    created_by INT UNSIGNED NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_req_user FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- Line items on a requisition slip (snapshot of name/unit so the printed
+-- slip still reads correctly even if the item is later renamed or deleted)
+CREATE TABLE requisition_items (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    requisition_id INT UNSIGNED NOT NULL,
+    item_type ENUM('material', 'asset') NOT NULL,
+    material_id INT UNSIGNED NULL,
+    asset_id INT UNSIGNED NULL,
+    item_name VARCHAR(255) NOT NULL,
+    unit VARCHAR(50) NULL,
+    quantity_requested INT NOT NULL DEFAULT 1,
+    quantity_issued INT NOT NULL DEFAULT 1,
+    note VARCHAR(255) NULL,
+    CONSTRAINT fk_reqitem_requisition FOREIGN KEY (requisition_id) REFERENCES requisitions(id) ON DELETE CASCADE,
+    CONSTRAINT fk_reqitem_material FOREIGN KEY (material_id) REFERENCES materials(id) ON DELETE SET NULL,
+    CONSTRAINT fk_reqitem_asset FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+-- ------------------------------------------------------------
 -- Material transactions (withdraw / stock-in history)
 -- ------------------------------------------------------------
 CREATE TABLE material_transactions (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     material_id INT UNSIGNED NOT NULL,
     user_id INT UNSIGNED NOT NULL,
+    requisition_id INT UNSIGNED NULL,
     transaction_type ENUM('withdraw', 'stock_in') NOT NULL,
     quantity INT NOT NULL,
     balance_after INT NOT NULL,
     note VARCHAR(255) NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_mtx_material FOREIGN KEY (material_id) REFERENCES materials(id) ON DELETE CASCADE,
-    CONSTRAINT fk_mtx_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT
+    CONSTRAINT fk_mtx_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_mtx_requisition FOREIGN KEY (requisition_id) REFERENCES requisitions(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- ------------------------------------------------------------
@@ -118,12 +153,14 @@ CREATE TABLE asset_transactions (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     asset_id INT UNSIGNED NOT NULL,
     user_id INT UNSIGNED NOT NULL,
+    requisition_id INT UNSIGNED NULL,
     action ENUM('borrow', 'return') NOT NULL,
     borrower_name VARCHAR(150) NULL,
     note VARCHAR(255) NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_atx_asset FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE,
-    CONSTRAINT fk_atx_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT
+    CONSTRAINT fk_atx_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_atx_requisition FOREIGN KEY (requisition_id) REFERENCES requisitions(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- ------------------------------------------------------------

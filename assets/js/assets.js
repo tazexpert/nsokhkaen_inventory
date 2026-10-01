@@ -17,7 +17,8 @@ function ensureSelectOption(selectEl, value) {
 }
 
 function loadAssets(keyword = '') {
-    $.get(API, { action: 'list', keyword }, function (res) {
+    const status = $('#statusFilter').val();
+    $.get(API, { action: 'list', keyword, status }, function (res) {
         const tbody = $('#assetsTable tbody').empty();
         res.data.forEach((a) => {
             tbody.append(`
@@ -113,4 +114,15 @@ $('#searchInput').on('input', function () {
     loadAssets($(this).val());
 });
 
-$(document).ready(() => loadAssets());
+$('#statusFilter').on('change', function () {
+    loadAssets($('#searchInput').val());
+});
+
+$(document).ready(() => {
+    // Came from a dashboard link like assets.php?filter=borrowed
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('filter')) {
+        $('#statusFilter').val(params.get('filter'));
+    }
+    loadAssets($('#searchInput').val());
+});

@@ -22,42 +22,35 @@ $recentAssetTx = $pdo->query("
     JOIN users u ON u.id = at.user_id
     ORDER BY at.created_at DESC LIMIT 5
 ")->fetchAll();
+
+// Each stat box links to its detail page - only for admin, since staff don't
+// have access to materials.php/assets.php and would otherwise hit a 403.
+function dashboardCard(string $colorClass, int $value, string $label, ?string $href): void
+{
+    $inner = '<div class="card ' . $colorClass . ' h-100' . ($href ? ' dashboard-clickable' : '') . '"><div class="card-body">'
+        . '<div class="fs-2 fw-bold">' . $value . '</div><div>' . htmlspecialchars($label) . '</div></div></div>';
+    if ($href) {
+        echo '<a href="' . htmlspecialchars($href) . '" class="text-decoration-none">' . $inner . '</a>';
+    } else {
+        echo $inner;
+    }
+}
 ?>
 
 <h3 class="mb-4">แดชบอร์ด</h3>
 
 <div class="row g-3 mb-4">
     <div class="col-md-3">
-        <div class="card text-bg-primary h-100">
-            <div class="card-body">
-                <div class="fs-2 fw-bold"><?= (int)$materialCount ?></div>
-                <div>รายการวัสดุสิ้นเปลือง</div>
-            </div>
-        </div>
+        <?php dashboardCard('text-bg-primary', (int) $materialCount, 'รายการวัสดุสิ้นเปลือง', isAdmin() ? BASE_URL . 'public/materials.php' : null) ?>
     </div>
     <div class="col-md-3">
-        <div class="card text-bg-warning h-100">
-            <div class="card-body">
-                <div class="fs-2 fw-bold"><?= (int)$lowStockCount ?></div>
-                <div>วัสดุใกล้หมดสต๊อก</div>
-            </div>
-        </div>
+        <?php dashboardCard('text-bg-warning', (int) $lowStockCount, 'วัสดุใกล้หมดสต๊อก', isAdmin() ? BASE_URL . 'public/materials.php?filter=low_stock' : null) ?>
     </div>
     <div class="col-md-3">
-        <div class="card text-bg-success h-100">
-            <div class="card-body">
-                <div class="fs-2 fw-bold"><?= (int)$assetCount ?></div>
-                <div>รายการครุภัณฑ์</div>
-            </div>
-        </div>
+        <?php dashboardCard('text-bg-success', (int) $assetCount, 'รายการครุภัณฑ์', isAdmin() ? BASE_URL . 'public/assets.php' : null) ?>
     </div>
     <div class="col-md-3">
-        <div class="card text-bg-danger h-100">
-            <div class="card-body">
-                <div class="fs-2 fw-bold"><?= (int)$borrowedCount ?></div>
-                <div>ครุภัณฑ์ที่ถูกยืมอยู่</div>
-            </div>
-        </div>
+        <?php dashboardCard('text-bg-danger', (int) $borrowedCount, 'ครุภัณฑ์ที่ถูกยืมอยู่', isAdmin() ? BASE_URL . 'public/assets.php?filter=borrowed' : null) ?>
     </div>
 </div>
 
@@ -67,7 +60,7 @@ $recentAssetTx = $pdo->query("
             <div class="card-header">การเบิกวัสดุล่าสุด</div>
             <div class="card-body p-0">
                 <table class="table table-sm mb-0">
-                    <thead><tr><th>รายการ</th><th>จำนวน</th><th>ผู้ทำรายการ</th><th>เวลา</th></tr></thead>
+                    <thead><tr><th>รายการ</th><th>จำนวน</th><th>ผู้ทำรายการ</th><th>เวลา</th><th></th></tr></thead>
                     <tbody>
                     <?php foreach ($recentMaterialTx as $tx): ?>
                         <tr>
@@ -75,10 +68,15 @@ $recentAssetTx = $pdo->query("
                             <td><?= (int)$tx['quantity'] ?></td>
                             <td><?= htmlspecialchars($tx['full_name']) ?></td>
                             <td><?= htmlspecialchars($tx['created_at']) ?></td>
+                            <td>
+                                <?php if ($tx['requisition_id']): ?>
+                                    <a href="<?= BASE_URL ?>public/requisition_print.php?id=<?= (int) $tx['requisition_id'] ?>" target="_blank" class="btn btn-sm btn-outline-secondary">ใบเบิก</a>
+                                <?php endif; ?>
+                            </td>
                         </tr>
                     <?php endforeach; ?>
                     <?php if (!$recentMaterialTx): ?>
-                        <tr><td colspan="4" class="text-center text-muted">ไม่มีข้อมูล</td></tr>
+                        <tr><td colspan="5" class="text-center text-muted">ไม่มีข้อมูล</td></tr>
                     <?php endif; ?>
                     </tbody>
                 </table>
@@ -90,7 +88,7 @@ $recentAssetTx = $pdo->query("
             <div class="card-header">การยืม/คืนครุภัณฑ์ล่าสุด</div>
             <div class="card-body p-0">
                 <table class="table table-sm mb-0">
-                    <thead><tr><th>รายการ</th><th>สถานะ</th><th>ผู้ทำรายการ</th><th>เวลา</th></tr></thead>
+                    <thead><tr><th>รายการ</th><th>สถานะ</th><th>ผู้ทำรายการ</th><th>เวลา</th><th></th></tr></thead>
                     <tbody>
                     <?php foreach ($recentAssetTx as $tx): ?>
                         <tr>
@@ -98,10 +96,15 @@ $recentAssetTx = $pdo->query("
                             <td><?= $tx['action'] === 'borrow' ? 'ยืม' : 'คืน' ?></td>
                             <td><?= htmlspecialchars($tx['full_name']) ?></td>
                             <td><?= htmlspecialchars($tx['created_at']) ?></td>
+                            <td>
+                                <?php if ($tx['requisition_id']): ?>
+                                    <a href="<?= BASE_URL ?>public/requisition_print.php?id=<?= (int) $tx['requisition_id'] ?>" target="_blank" class="btn btn-sm btn-outline-secondary">ใบเบิก</a>
+                                <?php endif; ?>
+                            </td>
                         </tr>
                     <?php endforeach; ?>
                     <?php if (!$recentAssetTx): ?>
-                        <tr><td colspan="4" class="text-center text-muted">ไม่มีข้อมูล</td></tr>
+                        <tr><td colspan="5" class="text-center text-muted">ไม่มีข้อมูล</td></tr>
                     <?php endif; ?>
                     </tbody>
                 </table>

@@ -33,14 +33,23 @@ switch ($action) {
 function listAssets(PDO $pdo): void
 {
     $keyword = sanitizeString($_GET['keyword'] ?? '');
+    $status = sanitizeString($_GET['status'] ?? '');
     $sql = "SELECT a.*, c.name AS category_name FROM assets a LEFT JOIN categories c ON c.id = a.category_id";
+    $conditions = [];
     $params = [];
     if ($keyword !== '') {
         // Two distinct placeholders: PDO with ATTR_EMULATE_PREPARES=false (native
         // prepared statements) does not allow the same named parameter twice.
-        $sql .= " WHERE a.name LIKE :kw1 OR a.asset_code LIKE :kw2";
+        $conditions[] = "(a.name LIKE :kw1 OR a.asset_code LIKE :kw2)";
         $params['kw1'] = "%$keyword%";
         $params['kw2'] = "%$keyword%";
+    }
+    if ($status !== '' && in_array($status, ['available', 'borrowed', 'maintenance', 'disposed'], true)) {
+        $conditions[] = "a.status = :status";
+        $params['status'] = $status;
+    }
+    if ($conditions) {
+        $sql .= " WHERE " . implode(' AND ', $conditions);
     }
     $sql .= " ORDER BY a.id DESC";
     $stmt = $pdo->prepare($sql);

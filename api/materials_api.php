@@ -33,14 +33,22 @@ switch ($action) {
 function listMaterials(PDO $pdo): void
 {
     $keyword = sanitizeString($_GET['keyword'] ?? '');
+    $lowStockOnly = ($_GET['low_stock'] ?? '') === '1';
     $sql = "SELECT m.*, c.name AS category_name FROM materials m LEFT JOIN categories c ON c.id = m.category_id";
+    $conditions = [];
     $params = [];
     if ($keyword !== '') {
         // Two distinct placeholders: PDO with ATTR_EMULATE_PREPARES=false (native
         // prepared statements) does not allow the same named parameter twice.
-        $sql .= " WHERE m.name LIKE :kw1 OR m.material_code LIKE :kw2";
+        $conditions[] = "(m.name LIKE :kw1 OR m.material_code LIKE :kw2)";
         $params['kw1'] = "%$keyword%";
         $params['kw2'] = "%$keyword%";
+    }
+    if ($lowStockOnly) {
+        $conditions[] = "m.stock_qty <= m.min_stock";
+    }
+    if ($conditions) {
+        $sql .= " WHERE " . implode(' AND ', $conditions);
     }
     $sql .= " ORDER BY m.id DESC";
     $stmt = $pdo->prepare($sql);

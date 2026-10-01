@@ -17,6 +17,39 @@
                 </div>
             </div>
         </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <i class="bi bi-cart"></i> รายการในใบเบิกปัจจุบัน (<span id="cartCount">0</span>)
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>รายการ</th><th>จำนวน</th><th></th></tr></thead>
+                    <tbody id="cartBody">
+                        <tr id="cartEmptyRow"><td colspan="3" class="text-center text-muted py-3">ยังไม่มีรายการ — สแกนแล้วกด "เพิ่มลงใบเบิก"</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-body border-top" id="cartFormWrapper" style="display:none;">
+                <div class="mb-2">
+                    <label class="form-label">ขอเบิกวัสดุ/ครุภัณฑ์เพื่อใช้งาน</label>
+                    <input type="text" class="form-control" id="req_purpose" placeholder="เช่น ใช้ในงานประชุม...">
+                </div>
+                <div class="row">
+                    <div class="col-7 mb-2">
+                        <label class="form-label">ชื่อผู้เบิก</label>
+                        <input type="text" class="form-control" id="req_requester_name">
+                    </div>
+                    <div class="col-5 mb-2">
+                        <label class="form-label">ตำแหน่ง</label>
+                        <input type="text" class="form-control" id="req_requester_position">
+                    </div>
+                </div>
+                <button class="btn btn-primary w-100" onclick="submitRequisition()">
+                    <i class="bi bi-save"></i> บันทึกใบเบิก
+                </button>
+            </div>
+        </div>
     </div>
 
     <div class="col-md-7">
@@ -25,15 +58,19 @@
             <div class="card-body" id="resultBody"></div>
         </div>
         <div id="alertBox"></div>
+        <div id="submitResultBox"></div>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
-const API_URL = '<?= BASE_URL ?>api/scan_api.php';
+const SCAN_API_URL = '<?= BASE_URL ?>api/scan_api.php';
+const REQ_API_URL = '<?= BASE_URL ?>api/requisition_api.php';
+const PRINT_URL = '<?= BASE_URL ?>public/requisition_print.php';
 const QR_FROM_LINK = <?= json_encode($_GET['qr'] ?? '') ?>;
 let html5QrCode = null;
 let scanning = false;
+let cart = []; // { item_type, id, name, unit, quantity, note, maxQty }
 
 function showAlert(message, type = 'danger') {
     $('#alertBox').html(`<div class="alert alert-${type} mt-3">${message}</div>`);
@@ -78,7 +115,8 @@ $('#btnManualLookup').on('click', function () {
 
 function lookupQr(qrCode) {
     $('#alertBox').empty();
-    $.get(API_URL, { action: 'lookup', qr_code: qrCode })
+    $('#submitResultBox').empty();
+    $.get(SCAN_API_URL, { action: 'lookup', qr_code: qrCode })
         .done((res) => renderResult(res))
         .fail((xhr) => showAlert(xhr.responseJSON?.message || 'เกิดข้อผิดพลาด'));
 }
@@ -113,19 +151,32 @@ function renderMaterial(m) {
             <label class="form-label">หมายเหตุ</label>
             <input type="text" class="form-control" id="withdrawNote">
         </div>
-        <button class="btn btn-primary" onclick="doWithdraw(${m.id})">บันทึกการเบิก</button>
+        <button class="btn btn-primary" onclick='addMaterialToCart(${JSON.stringify(m)})'>
+            <i class="bi bi-cart-plus"></i> เพิ่มลงใบเบิก
+        </button>
     `);
 }
 
-function doWithdraw(materialId) {
-    const quantity = $('#withdrawQty').val();
+function addMaterialToCart(m) {
+    const quantity = parseInt($('#withdrawQty').val(), 10) || 0;
     const note = $('#withdrawNote').val();
-    $.post(API_URL, { action: 'withdraw', material_id: materialId, quantity, note })
-        .done((res) => {
-            showAlert(res.message, 'success');
-            $('#resultCard').addClass('d-none');
-        })
-        .fail((xhr) => showAlert(xhr.responseJSON?.message || 'เกิดข้อผิดพลาด'));
+
+    if (quantity <= 0) {
+        showAlert('กรุณาระบุจำนวนที่ต้องการเบิก');
+        return;
+    }
+
+    const alreadyInCart = cart.filter((c) => c.item_type === 'material' && c.id === m.id)
+        .reduce((sum, c) => sum + c.quantity, 0);
+    if (alreadyInCart + quantity > m.stock_qty) {
+        showAlert(`สต๊อก "${m.name}" คงเหลือไม่เพียงพอ (คงเหลือ ${m.stock_qty} ${m.unit}, อยู่ในใบเบิกแล้ว ${alreadyInCart})`);
+        return;
+    }
+
+    cart.push({ item_type: 'material', id: m.id, name: m.name, unit: m.unit, quantity, note, display: `${quantity} ${m.unit}` });
+    renderCart();
+    $('#resultCard').addClass('d-none');
+    $('#alertBox').empty();
 }
 
 function renderAsset(a) {
@@ -135,14 +186,12 @@ function renderAsset(a) {
     if (a.status === 'available') {
         actionHtml = `
             <div class="mb-3">
-                <label class="form-label">ชื่อผู้ยืม</label>
-                <input type="text" class="form-control" id="borrowerName">
-            </div>
-            <div class="mb-3">
                 <label class="form-label">หมายเหตุ</label>
                 <input type="text" class="form-control" id="borrowNote">
             </div>
-            <button class="btn btn-warning" onclick="doBorrow(${a.id})">บันทึกการยืม</button>
+            <button class="btn btn-warning" onclick='addAssetToCart(${JSON.stringify(a)})'>
+                <i class="bi bi-cart-plus"></i> เพิ่มลงใบเบิก (ยืม)
+            </button>
         `;
     } else if (a.status === 'borrowed') {
         actionHtml = `
@@ -165,20 +214,80 @@ function renderAsset(a) {
     `);
 }
 
-function doBorrow(assetId) {
-    const borrower_name = $('#borrowerName').val();
+function addAssetToCart(a) {
     const note = $('#borrowNote').val();
-    $.post(API_URL, { action: 'borrow', asset_id: assetId, borrower_name, note })
+
+    if (cart.some((c) => c.item_type === 'asset' && c.id === a.id)) {
+        showAlert(`"${a.name}" อยู่ในใบเบิกนี้แล้ว`);
+        return;
+    }
+
+    cart.push({ item_type: 'asset', id: a.id, name: a.name, unit: null, quantity: 1, note, display: 'ยืม 1 รายการ' });
+    renderCart();
+    $('#resultCard').addClass('d-none');
+    $('#alertBox').empty();
+}
+
+function removeFromCart(index) {
+    cart.splice(index, 1);
+    renderCart();
+}
+
+function renderCart() {
+    $('#cartCount').text(cart.length);
+    const tbody = $('#cartBody').empty();
+
+    if (cart.length === 0) {
+        tbody.append('<tr id="cartEmptyRow"><td colspan="3" class="text-center text-muted py-3">ยังไม่มีรายการ — สแกนแล้วกด "เพิ่มลงใบเบิก"</td></tr>');
+        $('#cartFormWrapper').hide();
+        return;
+    }
+
+    cart.forEach((item, index) => {
+        tbody.append(`
+            <tr>
+                <td>${item.name}${item.item_type === 'asset' ? ' <span class="badge bg-success">ครุภัณฑ์</span>' : ''}</td>
+                <td>${item.display}</td>
+                <td class="text-end">
+                    <button class="btn btn-sm btn-outline-danger" onclick="removeFromCart(${index})"><i class="bi bi-trash"></i></button>
+                </td>
+            </tr>
+        `);
+    });
+    $('#cartFormWrapper').show();
+}
+
+function submitRequisition() {
+    if (cart.length === 0) return;
+
+    const payload = {
+        action: 'create',
+        purpose: $('#req_purpose').val(),
+        requester_name: $('#req_requester_name').val(),
+        requester_position: $('#req_requester_position').val(),
+        items: JSON.stringify(cart.map((c) => ({ item_type: c.item_type, id: c.id, quantity: c.quantity, note: c.note }))),
+    };
+
+    $.post(REQ_API_URL, payload)
         .done((res) => {
-            showAlert(res.message, 'success');
-            $('#resultCard').addClass('d-none');
+            $('#submitResultBox').html(`
+                <div class="alert alert-success mt-3">
+                    ${res.message}
+                    <a href="${PRINT_URL}?id=${res.requisition_id}" target="_blank" class="btn btn-sm btn-outline-success ms-2">
+                        <i class="bi bi-printer"></i> พิมพ์ใบเบิก
+                    </a>
+                </div>
+            `);
+            cart = [];
+            renderCart();
+            $('#req_purpose, #req_requester_name, #req_requester_position').val('');
         })
         .fail((xhr) => showAlert(xhr.responseJSON?.message || 'เกิดข้อผิดพลาด'));
 }
 
 function doReturn(assetId) {
     const note = $('#returnNote').val();
-    $.post(API_URL, { action: 'return', asset_id: assetId, note })
+    $.post(SCAN_API_URL, { action: 'return', asset_id: assetId, note })
         .done((res) => {
             showAlert(res.message, 'success');
             $('#resultCard').addClass('d-none');

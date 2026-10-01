@@ -14,7 +14,8 @@ function ensureSelectOption(selectEl, value) {
 }
 
 function loadMaterials(keyword = '') {
-    $.get(API, { action: 'list', keyword }, function (res) {
+    const lowStock = $('#lowStockOnly').is(':checked') ? '1' : '';
+    $.get(API, { action: 'list', keyword, low_stock: lowStock }, function (res) {
         const tbody = $('#materialsTable tbody').empty();
         res.data.forEach((m) => {
             const lowStock = m.stock_qty <= m.min_stock;
@@ -111,4 +112,15 @@ $('#searchInput').on('input', function () {
     loadMaterials($(this).val());
 });
 
-$(document).ready(() => loadMaterials());
+$('#lowStockOnly').on('change', function () {
+    loadMaterials($('#searchInput').val());
+});
+
+$(document).ready(() => {
+    // Came from a dashboard link like materials.php?filter=low_stock
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('filter') === 'low_stock') {
+        $('#lowStockOnly').prop('checked', true);
+    }
+    loadMaterials($('#searchInput').val());
+});

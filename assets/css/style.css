@@ -19,3 +19,13 @@ body {
 .table thead {
     background-color: #eef1f6;
 }
+
+.dashboard-clickable {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    cursor: pointer;
+}
+
+.dashboard-clickable:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}

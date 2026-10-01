@@ -31,6 +31,9 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                 <li class="nav-item">
                     <a class="nav-link <?= $currentPage === 'scan.php' ? 'active' : '' ?>" href="<?= BASE_URL ?>public/scan.php">สแกน QR Code</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link <?= $currentPage === 'requisitions.php' ? 'active' : '' ?>" href="<?= BASE_URL ?>public/requisitions.php">ใบเบิก</a>
+                </li>
                 <?php if (isAdmin()): ?>
                 <li class="nav-item">
                     <a class="nav-link <?= $currentPage === 'materials.php' ? 'active' : '' ?>" href="<?= BASE_URL ?>public/materials.php">วัสดุสิ้นเปลือง</a>

@@ -15,8 +15,16 @@ $storageLocations = $pdo->query('SELECT * FROM storage_locations ORDER BY name')
     </div>
 </div>
 
-<div class="mb-3">
-    <input type="text" id="searchInput" class="form-control" placeholder="ค้นหาชื่อวัสดุ หรือรหัส...">
+<div class="mb-3 row g-2">
+    <div class="col-md-8">
+        <input type="text" id="searchInput" class="form-control" placeholder="ค้นหาชื่อวัสดุ หรือรหัส...">
+    </div>
+    <div class="col-md-4">
+        <div class="form-check pt-2">
+            <input type="checkbox" class="form-check-input" id="lowStockOnly">
+            <label class="form-check-label" for="lowStockOnly">แสดงเฉพาะวัสดุใกล้หมดสต๊อก</label>
+        </div>
+    </div>
 </div>
 
 <div class="table-responsive">
