@@ -1,9 +1,18 @@
 <?php
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/functions.php';
-requireLogin();
-$user = currentUser();
 $currentPage = basename($_SERVER['PHP_SELF']);
+
+// The scan page accepts either a full login OR just a PIN (see
+// public/scan_login.php) - every other page still needs a full login.
+if ($currentPage === 'scan.php') {
+    requireScanAccess();
+    $user = currentScanUser();
+} else {
+    requireLogin();
+    $user = currentUser();
+}
+$fullyLoggedIn = isLoggedIn();
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -26,15 +35,19 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         </button>
         <div class="collapse navbar-collapse" id="navMenu">
             <ul class="navbar-nav me-auto">
+                <?php if ($fullyLoggedIn): ?>
                 <li class="nav-item">
                     <a class="nav-link <?= $currentPage === 'dashboard.php' ? 'active' : '' ?>" href="<?= BASE_URL ?>public/dashboard.php">แดชบอร์ด</a>
                 </li>
+                <?php endif; ?>
                 <li class="nav-item">
                     <a class="nav-link <?= $currentPage === 'scan.php' ? 'active' : '' ?>" href="<?= BASE_URL ?>public/scan.php">สแกน QR Code</a>
                 </li>
+                <?php if ($fullyLoggedIn): ?>
                 <li class="nav-item">
                     <a class="nav-link <?= $currentPage === 'requisitions.php' ? 'active' : '' ?>" href="<?= BASE_URL ?>public/requisitions.php">ใบเบิก</a>
                 </li>
+                <?php endif; ?>
                 <?php if (isAdmin()): ?>
                 <li class="nav-item">
                     <a class="nav-link <?= $currentPage === 'materials.php' ? 'active' : '' ?>" href="<?= BASE_URL ?>public/materials.php">วัสดุสิ้นเปลือง</a>
@@ -54,9 +67,9 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             <?php endif; ?>
             <span class="navbar-text text-white me-3">
                 <i class="bi bi-person-circle"></i> <?= htmlspecialchars($user['full_name']) ?>
-                (<?= $user['role'] === 'admin' ? 'ผู้ดูแลระบบ' : 'เจ้าหน้าที่' ?>)
+                <?= $fullyLoggedIn ? '(' . ($user['role'] === 'admin' ? 'ผู้ดูแลระบบ' : 'เจ้าหน้าที่') . ')' : '(ยืนยันด้วย PIN)' ?>
             </span>
-            <a href="<?= BASE_URL ?>public/logout.php" class="btn btn-outline-light btn-sm">ออกจากระบบ</a>
+            <a href="<?= BASE_URL ?>public/logout.php" class="btn btn-outline-light btn-sm"><?= $fullyLoggedIn ? 'ออกจากระบบ' : 'เปลี่ยนผู้ใช้' ?></a>
         </div>
     </div>
 </nav>

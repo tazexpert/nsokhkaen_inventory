@@ -17,34 +17,45 @@ require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/functions.php';
 
-$user = requireLoginApi();
 $pdo = getDbConnection();
 $action = $_REQUEST['action'] ?? '';
 
+// Actions driven straight from the scan page (public/scan.php) only need
+// scan-level access (full login OR a verified PIN - see
+// includes/auth.php:requireScanAccessApi()). Browsing/listing past slips
+// (e.g. from requisitions.php) still requires a full staff/admin login.
 switch ($action) {
     case 'cart_get':
+        requireScanAccessApi();
         jsonResponse(['success' => true, 'data' => getDraft()]);
         break;
     case 'cart_add_material':
+        requireScanAccessApi();
         cartAddMaterial($pdo);
         break;
     case 'cart_add_asset':
-        cartAddAsset($pdo);
+        $user = requireScanAccessApi();
+        cartAddAsset($pdo, $user);
         break;
     case 'cart_remove':
+        requireScanAccessApi();
         cartRemove();
         break;
     case 'cart_clear':
+        requireScanAccessApi();
         clearDraft();
         jsonResponse(['success' => true, 'data' => getDraft()]);
         break;
     case 'create':
+        $user = requireScanAccessApi();
         createRequisition($pdo, $user);
         break;
     case 'list':
+        requireLoginApi();
         listRequisitions($pdo);
         break;
     case 'get':
+        requireLoginApi();
         getRequisition($pdo);
         break;
     default:
@@ -115,24 +126,17 @@ function cartAddMaterial(PDO $pdo): void
     jsonResponse(['success' => true, 'data' => $draft]);
 }
 
-function cartAddAsset(PDO $pdo): void
+// $user is whoever already identified themselves to the scan page - either
+// a full login or a PIN verified once in this session (see
+// includes/auth.php:requireScanAccessApi()) - and becomes the borrower on
+// record for every asset added to the cart, with no PIN needed per item.
+function cartAddAsset(PDO $pdo, array $user): void
 {
     $assetId = (int) ($_POST['asset_id'] ?? 0);
     $note = sanitizeString($_POST['note'] ?? '');
-    $pin = sanitizeString($_POST['pin'] ?? '');
 
     if (!$assetId) {
         jsonResponse(['success' => false, 'message' => 'ข้อมูลไม่ถูกต้อง'], 422);
-    }
-
-    if (!preg_match('/^\d{6}$/', $pin)) {
-        jsonResponse(['success' => false, 'message' => 'กรุณากรอก PIN 6 หลักของผู้ยืม'], 422);
-    }
-
-    // Identifies the borrower without requiring them to have a system login.
-    $borrower = findUserByPin($pdo, $pin);
-    if ($borrower === null) {
-        jsonResponse(['success' => false, 'message' => 'ไม่พบผู้ยืมที่ใช้ PIN นี้ กรุณาตรวจสอบ PIN อีกครั้ง'], 422);
     }
 
     $stmt = $pdo->prepare('SELECT * FROM assets WHERE id = :id');
@@ -161,8 +165,8 @@ function cartAddAsset(PDO $pdo): void
         'unit' => null,
         'quantity' => 1,
         'note' => $note,
-        'borrower_name' => $borrower['full_name'],
-        'display' => 'ยืมโดย ' . $borrower['full_name'],
+        'borrower_name' => $user['full_name'],
+        'display' => 'ยืมโดย ' . $user['full_name'],
     ];
     $_SESSION['requisition_draft'] = $draft;
 
