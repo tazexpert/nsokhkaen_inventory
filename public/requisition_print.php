@@ -83,13 +83,7 @@ function formatThaiDate(string $datetime): string
         h2 { text-align: center; margin: 0 0 2px; font-size: 18pt; }
         .subtitle { text-align: center; margin: 0 0 8px; }
         .intro { margin: 8px 0; }
-        /* border-collapse centers the table's own outer border on the table's
-           bounding-box edge, so about half of it gets clipped when printed -
-           the right/bottom edges end up visibly thinner than the interior
-           (fully-contained) cell borders. Giving the table a slightly
-           thicker border of its own keeps the visible outer edge as thick
-           as the inner lines after that clipping. */
-        table { width: 100%; border-collapse: collapse; margin-bottom: 6px; border: 2px solid #000; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 6px; border: 1px solid #000; }
         th, td { border: 1px solid #000; padding: 3px 6px; }
         th { background: #f0f0f0; }
         .col-no { width: 8%; text-align: center; white-space: nowrap; }
