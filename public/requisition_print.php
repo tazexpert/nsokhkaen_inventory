@@ -121,8 +121,8 @@ function formatThaiDate(string $datetime): string
         <th class="col-no">ลำดับที่</th>
         <th>รายการสิ่งของ</th>
         <th class="col-unit">หน่วยนับ</th>
-        <th class="col-qty">จำนวนเบิก</th>
-        <th class="col-qty">จำนวนจ่าย</th>
+        <th class="col-qty">จำนวนที่ขอเบิก</th>
+        <th class="col-qty">จำนวนที่จ่าย</th>
         <th class="col-note">หมายเหตุ</th>
     </tr>
     </thead>
