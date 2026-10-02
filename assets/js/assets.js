@@ -16,13 +16,21 @@ function ensureSelectOption(selectEl, value) {
     $select.val(value);
 }
 
+function imageUrl(path) {
+    return path ? BASE_URL_JS + path : '';
+}
+
 function loadAssets(keyword = '') {
     const status = $('#statusFilter').val();
     $.get(API, { action: 'list', keyword, status }, function (res) {
         const tbody = $('#assetsTable tbody').empty();
         res.data.forEach((a) => {
+            const thumb = a.image_path
+                ? `<img src="${imageUrl(a.image_path)}" alt="" style="width:40px;height:40px;object-fit:cover;" class="rounded">`
+                : `<span class="text-muted"><i class="bi bi-image"></i></span>`;
             tbody.append(`
                 <tr>
+                    <td>${thumb}</td>
                     <td>${a.asset_code}</td>
                     <td>${a.name}</td>
                     <td>${a.category_name || '-'}</td>
@@ -43,6 +51,7 @@ function resetAssetForm() {
     $('#assetForm')[0].reset();
     $('#a_id').val('');
     $('#statusWrapper').hide();
+    $('#a_image_preview').attr('src', '').hide();
     $('#assetModalTitle').text('เพิ่มครุภัณฑ์');
 }
 
@@ -59,6 +68,11 @@ function editAsset(id) {
         ensureSelectOption('#a_storage_location', a.storage_location);
         $('#a_note').val(a.note);
         $('#statusWrapper').show();
+        if (a.image_path) {
+            $('#a_image_preview').attr('src', imageUrl(a.image_path)).show();
+        } else {
+            $('#a_image_preview').attr('src', '').hide();
+        }
         $('#assetModalTitle').text('แก้ไขครุภัณฑ์: ' + a.name);
         new bootstrap.Modal('#assetModal').show();
     });
@@ -66,19 +80,29 @@ function editAsset(id) {
 
 function saveAsset() {
     const id = $('#a_id').val();
-    const payload = {
-        action: id ? 'update' : 'create',
-        id,
-        name: $('#a_name').val(),
-        category_id: $('#a_category_id').val(),
-        brand_model: $('#a_brand_model').val(),
-        serial_number: $('#a_serial_number').val(),
-        status: $('#a_status').val() || 'available',
-        acquired_date: $('#a_acquired_date').val(),
-        storage_location: $('#a_storage_location').val(),
-        note: $('#a_note').val(),
-    };
-    $.post(API, payload)
+    const formData = new FormData();
+    formData.append('action', id ? 'update' : 'create');
+    formData.append('id', id);
+    formData.append('name', $('#a_name').val());
+    formData.append('category_id', $('#a_category_id').val());
+    formData.append('brand_model', $('#a_brand_model').val());
+    formData.append('serial_number', $('#a_serial_number').val());
+    formData.append('status', $('#a_status').val() || 'available');
+    formData.append('acquired_date', $('#a_acquired_date').val());
+    formData.append('storage_location', $('#a_storage_location').val());
+    formData.append('note', $('#a_note').val());
+    const imageFile = $('#a_image')[0].files[0];
+    if (imageFile) {
+        formData.append('image', imageFile);
+    }
+
+    $.ajax({
+        url: API,
+        type: 'POST',
+        data: formData,
+        contentType: false,
+        processData: false,
+    })
         .done((res) => {
             alert(res.message);
             bootstrap.Modal.getInstance(document.getElementById('assetModal')).hide();

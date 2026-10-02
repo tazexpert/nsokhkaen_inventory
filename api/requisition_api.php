@@ -188,7 +188,7 @@ function createRequisition(PDO $pdo, array $user): void
     try {
         $pdo->beginTransaction();
 
-        $requisitionNo = generateNextCode($pdo, 'requisitions', 'requisition_no', 'REQ');
+        $requisitionNo = generateRequisitionNo($pdo);
         $insertReq = $pdo->prepare('INSERT INTO requisitions (requisition_no, purpose, requester_name, requester_position, created_by)
             VALUES (:no, :purpose, :requester_name, :requester_position, :created_by)');
         $insertReq->execute([

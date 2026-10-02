@@ -71,7 +71,6 @@ function getMaterial(PDO $pdo): void
 function createMaterial(PDO $pdo, array $user): void
 {
     $name = sanitizeString($_POST['name'] ?? '');
-    $categoryId = $_POST['category_id'] !== '' ? (int) $_POST['category_id'] : null;
     $unit = sanitizeString($_POST['unit'] ?? 'ชิ้น');
     $unitCost = (float) ($_POST['unit_cost'] ?? 0);
     $stockQty = (int) ($_POST['stock_qty'] ?? 0);
@@ -89,10 +88,19 @@ function createMaterial(PDO $pdo, array $user): void
 
     $code = generateNextCode($pdo, 'materials', 'material_code', 'MAT');
     $qr = generateQrPayload($code);
+    // Category is never picked manually - it is always the first Thai
+    // consonant of the item name (e.g. "แฟ้ม..." -> "ฟ").
+    $categoryId = autoMaterialCategoryId($pdo, $name);
+
+    try {
+        $imagePath = handleImageUpload('image', 'materials', $code);
+    } catch (InvalidArgumentException $e) {
+        jsonResponse(['success' => false, 'message' => $e->getMessage()], 422);
+    }
 
     $stmt = $pdo->prepare("INSERT INTO materials
-        (material_code, qr_code, name, category_id, unit, unit_cost, stock_qty, min_stock, storage_location, note, created_by)
-        VALUES (:code, :qr, :name, :category_id, :unit, :unit_cost, :stock_qty, :min_stock, :location, :note, :created_by)");
+        (material_code, qr_code, name, category_id, unit, unit_cost, stock_qty, min_stock, storage_location, image_path, note, created_by)
+        VALUES (:code, :qr, :name, :category_id, :unit, :unit_cost, :stock_qty, :min_stock, :location, :image_path, :note, :created_by)");
     $stmt->execute([
         'code' => $code,
         'qr' => $qr,
@@ -103,6 +111,7 @@ function createMaterial(PDO $pdo, array $user): void
         'stock_qty' => $stockQty,
         'min_stock' => $minStock,
         'location' => $location ?: null,
+        'image_path' => $imagePath,
         'note' => $note ?: null,
         'created_by' => $user['id'],
     ]);
@@ -114,7 +123,6 @@ function updateMaterial(PDO $pdo): void
 {
     $id = (int) ($_POST['id'] ?? 0);
     $name = sanitizeString($_POST['name'] ?? '');
-    $categoryId = $_POST['category_id'] !== '' ? (int) $_POST['category_id'] : null;
     $unit = sanitizeString($_POST['unit'] ?? 'ชิ้น');
     $unitCost = (float) ($_POST['unit_cost'] ?? 0);
     $minStock = (int) ($_POST['min_stock'] ?? 0);
@@ -129,8 +137,24 @@ function updateMaterial(PDO $pdo): void
         jsonResponse(['success' => false, 'message' => 'ต้นทุน/หน่วยต้องไม่ติดลบ'], 422);
     }
 
+    $stmt = $pdo->prepare('SELECT material_code, image_path FROM materials WHERE id = :id');
+    $stmt->execute(['id' => $id]);
+    $existing = $stmt->fetch();
+    if (!$existing) {
+        jsonResponse(['success' => false, 'message' => 'ไม่พบข้อมูลวัสดุ'], 404);
+    }
+
+    try {
+        $imagePath = handleImageUpload('image', 'materials', $existing['material_code']) ?? $existing['image_path'];
+    } catch (InvalidArgumentException $e) {
+        jsonResponse(['success' => false, 'message' => $e->getMessage()], 422);
+    }
+
+    $categoryId = autoMaterialCategoryId($pdo, $name);
+
     $stmt = $pdo->prepare("UPDATE materials SET name = :name, category_id = :category_id, unit = :unit,
-        unit_cost = :unit_cost, min_stock = :min_stock, storage_location = :location, note = :note WHERE id = :id");
+        unit_cost = :unit_cost, min_stock = :min_stock, storage_location = :location, image_path = :image_path,
+        note = :note WHERE id = :id");
     $stmt->execute([
         'name' => $name,
         'category_id' => $categoryId,
@@ -138,6 +162,7 @@ function updateMaterial(PDO $pdo): void
         'unit_cost' => $unitCost,
         'min_stock' => $minStock,
         'location' => $location ?: null,
+        'image_path' => $imagePath,
         'note' => $note ?: null,
         'id' => $id,
     ]);
@@ -151,7 +176,17 @@ function deleteMaterial(PDO $pdo): void
     if (!$id) {
         jsonResponse(['success' => false, 'message' => 'ข้อมูลไม่ถูกต้อง'], 422);
     }
+
+    $stmt = $pdo->prepare('SELECT image_path FROM materials WHERE id = :id');
+    $stmt->execute(['id' => $id]);
+    $imagePath = $stmt->fetchColumn();
+
     $stmt = $pdo->prepare('DELETE FROM materials WHERE id = :id');
     $stmt->execute(['id' => $id]);
+
+    if ($imagePath && file_exists(__DIR__ . '/../' . $imagePath)) {
+        unlink(__DIR__ . '/../' . $imagePath);
+    }
+
     jsonResponse(['success' => true, 'message' => 'ลบข้อมูลวัสดุเรียบร้อยแล้ว']);
 }

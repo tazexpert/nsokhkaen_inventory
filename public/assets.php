@@ -34,7 +34,7 @@ $storageLocations = $pdo->query('SELECT * FROM storage_locations ORDER BY name')
 <table class="table table-striped align-middle" id="assetsTable">
     <thead>
     <tr>
-        <th>รหัส</th><th>ชื่อครุภัณฑ์</th><th>หมวดหมู่</th><th>ยี่ห้อ/รุ่น</th><th>สถานะ</th><th>ที่จัดเก็บ</th><th></th>
+        <th>รูป</th><th>รหัส</th><th>ชื่อครุภัณฑ์</th><th>หมวดหมู่</th><th>ยี่ห้อ/รุ่น</th><th>สถานะ</th><th>ที่จัดเก็บ</th><th></th>
     </tr>
     </thead>
     <tbody></tbody>
@@ -101,6 +101,12 @@ $storageLocations = $pdo->query('SELECT * FROM storage_locations ORDER BY name')
                     <div class="mb-3">
                         <label class="form-label">หมายเหตุ</label>
                         <textarea class="form-control" id="a_note"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">รูปภาพ</label>
+                        <div class="mb-2"><img id="a_image_preview" src="" alt="" style="max-height:120px; display:none;" class="border rounded"></div>
+                        <input type="file" class="form-control" id="a_image" accept="image/*">
+                        <div class="form-text">JPG, PNG, WEBP หรือ GIF ขนาดไม่เกิน 5MB</div>
                     </div>
                 </form>
             </div>

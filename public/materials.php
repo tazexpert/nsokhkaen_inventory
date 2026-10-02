@@ -2,7 +2,6 @@
 require_once __DIR__ . '/../includes/header.php';
 requireAdmin();
 $pdo = getDbConnection();
-$categories = $pdo->query("SELECT * FROM categories WHERE item_type = 'material' ORDER BY name")->fetchAll();
 $storageLocations = $pdo->query('SELECT * FROM storage_locations ORDER BY name')->fetchAll();
 ?>
 
@@ -31,7 +30,7 @@ $storageLocations = $pdo->query('SELECT * FROM storage_locations ORDER BY name')
 <table class="table table-striped align-middle" id="materialsTable">
     <thead>
     <tr>
-        <th>รหัส</th><th>ชื่อวัสดุ</th><th>หมวดหมู่</th><th>คงเหลือ</th><th>หน่วย</th><th>ต้นทุน/หน่วย</th><th>ที่จัดเก็บ</th><th></th>
+        <th>รูป</th><th>รหัส</th><th>ชื่อวัสดุ</th><th>หมวดหมู่</th><th>คงเหลือ</th><th>หน่วย</th><th>ต้นทุน/หน่วย</th><th>ที่จัดเก็บ</th><th></th>
     </tr>
     </thead>
     <tbody></tbody>
@@ -55,12 +54,8 @@ $storageLocations = $pdo->query('SELECT * FROM storage_locations ORDER BY name')
                     </div>
                     <div class="mb-3">
                         <label class="form-label">หมวดหมู่</label>
-                        <select class="form-select" id="m_category_id">
-                            <option value="">-- ไม่ระบุ --</option>
-                            <?php foreach ($categories as $c): ?>
-                                <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['name']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                        <input type="text" class="form-control" id="m_category_preview" disabled>
+                        <div class="form-text">กำหนดอัตโนมัติจากตัวอักษรไทยตัวแรกของชื่อวัสดุ</div>
                     </div>
                     <div class="row">
                         <div class="col-6 mb-3">
@@ -96,6 +91,12 @@ $storageLocations = $pdo->query('SELECT * FROM storage_locations ORDER BY name')
                         <label class="form-label">หมายเหตุ</label>
                         <textarea class="form-control" id="m_note"></textarea>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label">รูปภาพ</label>
+                        <div class="mb-2"><img id="m_image_preview" src="" alt="" style="max-height:120px; display:none;" class="border rounded"></div>
+                        <input type="file" class="form-control" id="m_image" accept="image/*">
+                        <div class="form-text">JPG, PNG, WEBP หรือ GIF ขนาดไม่เกิน 5MB</div>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">
@@ -115,9 +116,9 @@ $storageLocations = $pdo->query('SELECT * FROM storage_locations ORDER BY name')
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p class="text-muted mb-1">รองรับ 2 รูปแบบไฟล์ - ระบบตรวจจับอัตโนมัติ:</p>
+                <p class="text-muted mb-1">รองรับ 2 รูปแบบไฟล์ - ระบบตรวจจับอัตโนมัติ (หมวดหมู่กำหนดให้อัตโนมัติจากชื่อวัสดุเสมอ ไม่ต้องระบุมาในไฟล์):</p>
                 <ul class="text-muted small">
-                    <li>แบบฟอร์มของระบบ: คอลัมน์ name, category_id (ไม่บังคับ), unit, unit_cost, stock_qty, min_stock, storage_location, note</li>
+                    <li>แบบฟอร์มของระบบ: คอลัมน์ name, unit, unit_cost, stock_qty, min_stock, storage_location, note</li>
                     <li>แบบฟอร์ม "รายละเอียดพัสดุ" ของสำนักงาน (ลำดับที่ / รายละเอียดของพัสดุ / ราคาที่ได้มาจากการสืบราคา(หน่วยละ) / จำนวน(หน่วย)) - ใช้ไฟล์เดิมได้เลยโดยไม่ต้องปรับคอลัมน์</li>
                 </ul>
                 <a href="<?= BASE_URL ?>api/import_template.php?type=material" class="btn btn-sm btn-outline-primary mb-3">

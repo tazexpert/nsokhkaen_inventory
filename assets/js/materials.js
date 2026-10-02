@@ -13,14 +13,41 @@ function ensureSelectOption(selectEl, value) {
     $select.val(value);
 }
 
+// Mirrors includes/functions.php:thaiCategoryLetter() - first Thai consonant
+// (ก-ฮ) in the name, skipping leading vowels/digits/Latin letters/spaces.
+// Used only for the live preview in the form; the server always recomputes
+// the real value on save.
+function thaiCategoryLetterPreview(name) {
+    for (const char of Array.from(name || '')) {
+        const code = char.codePointAt(0);
+        if (code >= 0x0E01 && code <= 0x0E2E) {
+            return char;
+        }
+    }
+    return null;
+}
+
+function updateCategoryPreview() {
+    const letter = thaiCategoryLetterPreview($('#m_name').val());
+    $('#m_category_preview').val(letter || '(ไม่พบตัวอักษรไทยในชื่อ)');
+}
+
+function imageUrl(path) {
+    return path ? BASE_URL_JS + path : '';
+}
+
 function loadMaterials(keyword = '') {
     const lowStock = $('#lowStockOnly').is(':checked') ? '1' : '';
     $.get(API, { action: 'list', keyword, low_stock: lowStock }, function (res) {
         const tbody = $('#materialsTable tbody').empty();
         res.data.forEach((m) => {
             const lowStock = m.stock_qty <= m.min_stock;
+            const thumb = m.image_path
+                ? `<img src="${imageUrl(m.image_path)}" alt="" style="width:40px;height:40px;object-fit:cover;" class="rounded">`
+                : `<span class="text-muted"><i class="bi bi-image"></i></span>`;
             tbody.append(`
                 <tr>
+                    <td>${thumb}</td>
                     <td>${m.material_code}</td>
                     <td>${m.name}</td>
                     <td>${m.category_name || '-'}</td>
@@ -41,6 +68,8 @@ function loadMaterials(keyword = '') {
 function resetMaterialForm() {
     $('#materialForm')[0].reset();
     $('#m_id').val('');
+    $('#m_category_preview').val('');
+    $('#m_image_preview').attr('src', '').hide();
     $('#materialModalTitle').text('เพิ่มวัสดุ');
 }
 
@@ -49,13 +78,18 @@ function editMaterial(id) {
         const m = res.data;
         $('#m_id').val(m.id);
         $('#m_name').val(m.name);
-        $('#m_category_id').val(m.category_id || '');
         $('#m_unit').val(m.unit);
         $('#m_unit_cost').val(m.unit_cost);
         $('#m_stock_qty').val(m.stock_qty).prop('disabled', true);
         $('#m_min_stock').val(m.min_stock);
         ensureSelectOption('#m_storage_location', m.storage_location);
         $('#m_note').val(m.note);
+        updateCategoryPreview();
+        if (m.image_path) {
+            $('#m_image_preview').attr('src', imageUrl(m.image_path)).show();
+        } else {
+            $('#m_image_preview').attr('src', '').hide();
+        }
         $('#materialModalTitle').text('แก้ไขวัสดุ: ' + m.name);
         new bootstrap.Modal('#materialModal').show();
     });
@@ -63,19 +97,28 @@ function editMaterial(id) {
 
 function saveMaterial() {
     const id = $('#m_id').val();
-    const payload = {
-        action: id ? 'update' : 'create',
-        id,
-        name: $('#m_name').val(),
-        category_id: $('#m_category_id').val(),
-        unit: $('#m_unit').val(),
-        unit_cost: $('#m_unit_cost').val(),
-        stock_qty: $('#m_stock_qty').val(),
-        min_stock: $('#m_min_stock').val(),
-        storage_location: $('#m_storage_location').val(),
-        note: $('#m_note').val(),
-    };
-    $.post(API, payload)
+    const formData = new FormData();
+    formData.append('action', id ? 'update' : 'create');
+    formData.append('id', id);
+    formData.append('name', $('#m_name').val());
+    formData.append('unit', $('#m_unit').val());
+    formData.append('unit_cost', $('#m_unit_cost').val());
+    formData.append('stock_qty', $('#m_stock_qty').val());
+    formData.append('min_stock', $('#m_min_stock').val());
+    formData.append('storage_location', $('#m_storage_location').val());
+    formData.append('note', $('#m_note').val());
+    const imageFile = $('#m_image')[0].files[0];
+    if (imageFile) {
+        formData.append('image', imageFile);
+    }
+
+    $.ajax({
+        url: API,
+        type: 'POST',
+        data: formData,
+        contentType: false,
+        processData: false,
+    })
         .done((res) => {
             alert(res.message);
             bootstrap.Modal.getInstance(document.getElementById('materialModal')).hide();
@@ -115,6 +158,8 @@ $('#searchInput').on('input', function () {
 $('#lowStockOnly').on('change', function () {
     loadMaterials($('#searchInput').val());
 });
+
+$('#m_name').on('input', updateCategoryPreview);
 
 $(document).ready(() => {
     // Came from a dashboard link like materials.php?filter=low_stock

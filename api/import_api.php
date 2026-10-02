@@ -53,7 +53,6 @@ function extractMaterialRecords(array $rows): array
                 'unit_cost' => (float) ($record['unit_cost'] ?? 0),
                 'stock_qty' => (int) ($record['stock_qty'] ?? 0),
                 'min_stock' => (int) ($record['min_stock'] ?? 0),
-                'category_id' => !empty($record['category_id']) ? (int) $record['category_id'] : null,
                 'storage_location' => trim((string) ($record['storage_location'] ?? '')) ?: null,
                 'note' => trim((string) ($record['note'] ?? '')) ?: null,
             ];
@@ -76,7 +75,6 @@ function extractMaterialRecords(array $rows): array
             'unit_cost' => (float) ($row[3] ?? 0),
             'stock_qty' => (int) ($row[4] ?? 0),
             'min_stock' => 0,
-            'category_id' => null,
             'storage_location' => null,
             'note' => null,
         ];
@@ -95,12 +93,13 @@ try {
         foreach ($records as $record) {
             $code = generateNextCode($pdo, 'materials', 'material_code', 'MAT');
             $qr = generateQrPayload($code);
+            $categoryId = autoMaterialCategoryId($pdo, $record['name']);
 
             $stmt = $pdo->prepare("INSERT INTO materials
                 (material_code, qr_code, name, category_id, unit, unit_cost, stock_qty, min_stock, storage_location, note, created_by)
                 VALUES (:code, :qr, :name, :category_id, :unit, :unit_cost, :stock_qty, :min_stock, :location, :note, :created_by)");
             $stmt->execute([
-                'code' => $code, 'qr' => $qr, 'name' => $record['name'], 'category_id' => $record['category_id'],
+                'code' => $code, 'qr' => $qr, 'name' => $record['name'], 'category_id' => $categoryId,
                 'unit' => $record['unit'], 'unit_cost' => $record['unit_cost'], 'stock_qty' => $record['stock_qty'],
                 'min_stock' => $record['min_stock'], 'location' => $record['storage_location'], 'note' => $record['note'],
                 'created_by' => $_SESSION['user']['id'],

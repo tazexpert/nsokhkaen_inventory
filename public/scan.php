@@ -148,8 +148,10 @@ function renderResult(res) {
 }
 
 function renderMaterial(m) {
+    const image = m.image_path ? `<img src="${BASE_URL_JS}${m.image_path}" alt="" class="img-fluid rounded mb-2" style="max-height:160px;">` : '';
     $('#resultBody').html(`
         <span class="badge bg-info mb-2">วัสดุสิ้นเปลือง</span>
+        ${image}
         <h5>${m.name}</h5>
         <p class="mb-1">รหัส: ${m.material_code}</p>
         <p class="mb-1">คงเหลือ: <strong>${m.stock_qty}</strong> ${m.unit}</p>
@@ -219,8 +221,10 @@ function renderAsset(a) {
         actionHtml = `<div class="alert alert-secondary mb-0">ครุภัณฑ์รายการนี้ไม่สามารถยืม/คืนได้ในสถานะปัจจุบัน</div>`;
     }
 
+    const image = a.image_path ? `<img src="${BASE_URL_JS}${a.image_path}" alt="" class="img-fluid rounded mb-2" style="max-height:160px;">` : '';
     $('#resultBody').html(`
         <span class="badge bg-success mb-2">ครุภัณฑ์</span>
+        ${image}
         <h5>${a.name}</h5>
         <p class="mb-1">รหัส: ${a.asset_code}</p>
         <p class="mb-3">สถานะ: <strong>${statusMap[a.status] || a.status}</strong></p>

@@ -86,9 +86,15 @@ function createAsset(PDO $pdo, array $user): void
     $code = generateNextCode($pdo, 'assets', 'asset_code', 'AST');
     $qr = generateQrPayload($code);
 
+    try {
+        $imagePath = handleImageUpload('image', 'assets', $code);
+    } catch (InvalidArgumentException $e) {
+        jsonResponse(['success' => false, 'message' => $e->getMessage()], 422);
+    }
+
     $stmt = $pdo->prepare("INSERT INTO assets
-        (asset_code, qr_code, name, category_id, brand_model, serial_number, status, storage_location, acquired_date, note, created_by)
-        VALUES (:code, :qr, :name, :category_id, :brand_model, :serial, 'available', :location, :acquired_date, :note, :created_by)");
+        (asset_code, qr_code, name, category_id, brand_model, serial_number, status, storage_location, acquired_date, image_path, note, created_by)
+        VALUES (:code, :qr, :name, :category_id, :brand_model, :serial, 'available', :location, :acquired_date, :image_path, :note, :created_by)");
     $stmt->execute([
         'code' => $code,
         'qr' => $qr,
@@ -98,6 +104,7 @@ function createAsset(PDO $pdo, array $user): void
         'serial' => $serial ?: null,
         'location' => $location ?: null,
         'acquired_date' => $acquiredDate,
+        'image_path' => $imagePath,
         'note' => $note ?: null,
         'created_by' => $user['id'],
     ]);
@@ -125,9 +132,22 @@ function updateAsset(PDO $pdo): void
         jsonResponse(['success' => false, 'message' => 'สถานะไม่ถูกต้อง'], 422);
     }
 
+    $stmt = $pdo->prepare('SELECT asset_code, image_path FROM assets WHERE id = :id');
+    $stmt->execute(['id' => $id]);
+    $existing = $stmt->fetch();
+    if (!$existing) {
+        jsonResponse(['success' => false, 'message' => 'ไม่พบข้อมูลครุภัณฑ์'], 404);
+    }
+
+    try {
+        $imagePath = handleImageUpload('image', 'assets', $existing['asset_code']) ?? $existing['image_path'];
+    } catch (InvalidArgumentException $e) {
+        jsonResponse(['success' => false, 'message' => $e->getMessage()], 422);
+    }
+
     $stmt = $pdo->prepare("UPDATE assets SET name = :name, category_id = :category_id, brand_model = :brand_model,
-        serial_number = :serial, storage_location = :location, acquired_date = :acquired_date, note = :note,
-        status = :status WHERE id = :id");
+        serial_number = :serial, storage_location = :location, acquired_date = :acquired_date, image_path = :image_path,
+        note = :note, status = :status WHERE id = :id");
     $stmt->execute([
         'name' => $name,
         'category_id' => $categoryId,
@@ -135,6 +155,7 @@ function updateAsset(PDO $pdo): void
         'serial' => $serial ?: null,
         'location' => $location ?: null,
         'acquired_date' => $acquiredDate,
+        'image_path' => $imagePath,
         'note' => $note ?: null,
         'status' => $status,
         'id' => $id,
@@ -149,7 +170,17 @@ function deleteAsset(PDO $pdo): void
     if (!$id) {
         jsonResponse(['success' => false, 'message' => 'ข้อมูลไม่ถูกต้อง'], 422);
     }
+
+    $stmt = $pdo->prepare('SELECT image_path FROM assets WHERE id = :id');
+    $stmt->execute(['id' => $id]);
+    $imagePath = $stmt->fetchColumn();
+
     $stmt = $pdo->prepare('DELETE FROM assets WHERE id = :id');
     $stmt->execute(['id' => $id]);
+
+    if ($imagePath && file_exists(__DIR__ . '/../' . $imagePath)) {
+        unlink(__DIR__ . '/../' . $imagePath);
+    }
+
     jsonResponse(['success' => true, 'message' => 'ลบข้อมูลครุภัณฑ์เรียบร้อยแล้ว']);
 }
