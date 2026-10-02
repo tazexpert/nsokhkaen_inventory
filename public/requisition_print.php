@@ -86,7 +86,7 @@ function formatThaiDate(string $datetime): string
         table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
         th, td { border: 1px solid #000; padding: 3px 6px; }
         th { background: #f0f0f0; }
-        .col-no { width: 6%; text-align: center; }
+        .col-no { width: 8%; text-align: center; white-space: nowrap; }
         .col-unit { width: 10%; text-align: center; }
         .col-qty { width: 12%; text-align: center; }
         .col-note { width: 16%; }
