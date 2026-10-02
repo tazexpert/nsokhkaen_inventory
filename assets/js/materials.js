@@ -63,6 +63,7 @@ function loadMaterials(keyword = '') {
                     <td>${Number(m.unit_cost).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
                     <td>${m.storage_location || '-'}</td>
                     <td class="text-end">
+                        <button class="btn btn-sm btn-outline-success" title="รับเข้าสต็อก" onclick="openReceiveStock(${m.id}, '${(m.name || '').replace(/'/g, "\\'")}', ${m.stock_qty}, '${m.unit}')"><i class="bi bi-box-arrow-in-down"></i></button>
                         <button class="btn btn-sm btn-outline-primary" onclick="editMaterial(${m.id})"><i class="bi bi-pencil"></i></button>
                         <button class="btn btn-sm btn-outline-danger" onclick="deleteMaterial(${m.id})"><i class="bi bi-trash"></i></button>
                     </td>
@@ -77,6 +78,7 @@ function resetMaterialForm() {
     $('#m_id').val('');
     $('#m_category').val('').data('autofilled', false);
     $('#m_image_preview').attr('src', '').hide();
+    $('#m_stock_qty_label').text('จำนวนคงเหลือเริ่มต้น');
     $('#materialModalTitle').text('เพิ่มวัสดุ');
 }
 
@@ -87,7 +89,8 @@ function editMaterial(id) {
         $('#m_name').val(m.name);
         $('#m_unit').val(m.unit);
         $('#m_unit_cost').val(m.unit_cost);
-        $('#m_stock_qty').val(m.stock_qty).prop('disabled', true);
+        $('#m_stock_qty').val(m.stock_qty);
+        $('#m_stock_qty_label').text('จำนวนคงเหลือ');
         $('#m_min_stock').val(m.min_stock);
         ensureSelectOption('#m_storage_location', m.storage_location);
         $('#m_note').val(m.note);
@@ -130,7 +133,34 @@ function saveMaterial() {
         .done((res) => {
             alert(res.message);
             bootstrap.Modal.getInstance(document.getElementById('materialModal')).hide();
-            $('#m_stock_qty').prop('disabled', false);
+            loadMaterials();
+        })
+        .fail((xhr) => alert(xhr.responseJSON?.message || 'เกิดข้อผิดพลาด'));
+}
+
+function openReceiveStock(id, name, currentQty, unit) {
+    $('#rs_id').val(id);
+    $('#rs_current_qty').text(currentQty);
+    $('#rs_unit').text(unit || '');
+    $('#rs_quantity').val('');
+    $('#rs_unit_cost').val('');
+    $('#rs_note').val('');
+    $('#receiveStockModalTitle').text('รับเข้าสต็อก: ' + name);
+    new bootstrap.Modal('#receiveStockModal').show();
+}
+
+function saveReceiveStock() {
+    const payload = {
+        action: 'receive_stock',
+        id: $('#rs_id').val(),
+        quantity: $('#rs_quantity').val(),
+        unit_cost: $('#rs_unit_cost').val(),
+        note: $('#rs_note').val(),
+    };
+    $.post(API, payload)
+        .done((res) => {
+            alert(res.message);
+            bootstrap.Modal.getInstance(document.getElementById('receiveStockModal')).hide();
             loadMaterials();
         })
         .fail((xhr) => alert(xhr.responseJSON?.message || 'เกิดข้อผิดพลาด'));

@@ -22,6 +22,10 @@ switch ($action) {
         requireAdminApi();
         updateMaterial($pdo);
         break;
+    case 'receive_stock':
+        requireAdminApi();
+        receiveStock($pdo, $user);
+        break;
     case 'delete':
         requireAdminApi();
         deleteMaterial($pdo);
@@ -126,6 +130,7 @@ function updateMaterial(PDO $pdo): void
     $name = sanitizeString($_POST['name'] ?? '');
     $unit = sanitizeString($_POST['unit'] ?? 'ชิ้น');
     $unitCost = (float) ($_POST['unit_cost'] ?? 0);
+    $stockQty = (int) ($_POST['stock_qty'] ?? 0);
     $minStock = (int) ($_POST['min_stock'] ?? 0);
     $location = sanitizeString($_POST['storage_location'] ?? '');
     $note = sanitizeString($_POST['note'] ?? '');
@@ -137,6 +142,10 @@ function updateMaterial(PDO $pdo): void
 
     if ($unitCost < 0) {
         jsonResponse(['success' => false, 'message' => 'ต้นทุน/หน่วยต้องไม่ติดลบ'], 422);
+    }
+
+    if ($stockQty < 0) {
+        jsonResponse(['success' => false, 'message' => 'จำนวนคงเหลือต้องไม่ติดลบ'], 422);
     }
 
     $stmt = $pdo->prepare('SELECT material_code, image_path FROM materials WHERE id = :id');
@@ -155,13 +164,14 @@ function updateMaterial(PDO $pdo): void
     $categoryId = resolveMaterialCategoryId($pdo, $name, $category);
 
     $stmt = $pdo->prepare("UPDATE materials SET name = :name, category_id = :category_id, unit = :unit,
-        unit_cost = :unit_cost, min_stock = :min_stock, storage_location = :location, image_path = :image_path,
-        note = :note WHERE id = :id");
+        unit_cost = :unit_cost, stock_qty = :stock_qty, min_stock = :min_stock, storage_location = :location,
+        image_path = :image_path, note = :note WHERE id = :id");
     $stmt->execute([
         'name' => $name,
         'category_id' => $categoryId,
         'unit' => $unit,
         'unit_cost' => $unitCost,
+        'stock_qty' => $stockQty,
         'min_stock' => $minStock,
         'location' => $location ?: null,
         'image_path' => $imagePath,
@@ -170,6 +180,48 @@ function updateMaterial(PDO $pdo): void
     ]);
 
     jsonResponse(['success' => true, 'message' => 'แก้ไขข้อมูลวัสดุเรียบร้อยแล้ว']);
+}
+
+// Receives new stock for a material: adds $quantity to the current
+// stock_qty and overwrites unit_cost with the latest purchase price,
+// logging a 'stock_in' material_transactions row for the audit trail.
+function receiveStock(PDO $pdo, array $user): void
+{
+    $id = (int) ($_POST['id'] ?? 0);
+    $quantity = (int) ($_POST['quantity'] ?? 0);
+    $unitCost = (float) ($_POST['unit_cost'] ?? 0);
+    $note = sanitizeString($_POST['note'] ?? '');
+
+    if (!$id || $quantity <= 0) {
+        jsonResponse(['success' => false, 'message' => 'กรุณาระบุจำนวนที่รับเข้าให้ถูกต้อง'], 422);
+    }
+    if ($unitCost < 0) {
+        jsonResponse(['success' => false, 'message' => 'ต้นทุน/หน่วยต้องไม่ติดลบ'], 422);
+    }
+
+    $stmt = $pdo->prepare('SELECT stock_qty FROM materials WHERE id = :id');
+    $stmt->execute(['id' => $id]);
+    $material = $stmt->fetch();
+    if (!$material) {
+        jsonResponse(['success' => false, 'message' => 'ไม่พบข้อมูลวัสดุ'], 404);
+    }
+
+    $newQty = (int) $material['stock_qty'] + $quantity;
+
+    $pdo->prepare('UPDATE materials SET stock_qty = :stock_qty, unit_cost = :unit_cost WHERE id = :id')
+        ->execute(['stock_qty' => $newQty, 'unit_cost' => $unitCost, 'id' => $id]);
+
+    $pdo->prepare("INSERT INTO material_transactions (material_id, user_id, transaction_type, quantity, balance_after, note)
+        VALUES (:material_id, :user_id, 'stock_in', :quantity, :balance_after, :note)")
+        ->execute([
+            'material_id' => $id,
+            'user_id' => $user['id'],
+            'quantity' => $quantity,
+            'balance_after' => $newQty,
+            'note' => $note ?: null,
+        ]);
+
+    jsonResponse(['success' => true, 'message' => 'รับเข้าสต็อกเรียบร้อยแล้ว']);
 }
 
 function deleteMaterial(PDO $pdo): void

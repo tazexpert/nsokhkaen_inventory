@@ -70,7 +70,7 @@ $materialCategories = $pdo->query("SELECT * FROM categories WHERE item_type = 'm
                             <input type="text" class="form-control" id="m_unit" value="ชิ้น">
                         </div>
                         <div class="col-6 mb-3">
-                            <label class="form-label">จำนวนคงเหลือเริ่มต้น</label>
+                            <label class="form-label" id="m_stock_qty_label">จำนวนคงเหลือเริ่มต้น</label>
                             <input type="number" class="form-control" id="m_stock_qty" value="0">
                         </div>
                     </div>
@@ -109,6 +109,41 @@ $materialCategories = $pdo->query("SELECT * FROM categories WHERE item_type = 'm
             <div class="modal-footer">
                 <button class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
                 <button class="btn btn-primary" onclick="saveMaterial()">บันทึก</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Receive stock modal -->
+<div class="modal fade" id="receiveStockModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="receiveStockModalTitle">รับเข้าสต็อก</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="receiveStockForm">
+                    <input type="hidden" id="rs_id">
+                    <p class="mb-3">จำนวนคงเหลือปัจจุบัน: <strong id="rs_current_qty">0</strong> <span id="rs_unit"></span></p>
+                    <div class="mb-3">
+                        <label class="form-label">จำนวนที่รับเข้า</label>
+                        <input type="number" min="1" class="form-control" id="rs_quantity" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">ต้นทุน/หน่วย (บาท)</label>
+                        <input type="number" step="0.01" min="0" class="form-control" id="rs_unit_cost" required>
+                        <div class="form-text">จะใช้แทนที่ต้นทุน/หน่วยเดิมของรายการนี้</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">หมายเหตุ</label>
+                        <input type="text" class="form-control" id="rs_note">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                <button class="btn btn-primary" onclick="saveReceiveStock()">บันทึก</button>
             </div>
         </div>
     </div>
