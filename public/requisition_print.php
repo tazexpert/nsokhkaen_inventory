@@ -83,7 +83,15 @@ function formatThaiDate(string $datetime): string
         h2 { text-align: center; margin: 0 0 2px; font-size: 18pt; }
         .subtitle { text-align: center; margin: 0 0 8px; }
         .intro { margin: 8px 0; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 6px; border: 1px solid #000; }
+        /* border-collapse centers the table's own outer border on the
+           table's bounding-box edge, so most of it gets clipped off when
+           rasterized for print - measured on a real export, the right
+           edge comes out visibly thinner than the interior column
+           dividers. Only the right edge sits flush against the page's
+           printable-area boundary (top/left/bottom don't), so only it
+           needs the extra width to compensate; boosting all four sides
+           would make the whole frame thicker than the interior lines. */
+        table { width: 100%; border-collapse: collapse; margin-bottom: 6px; border: 1px solid #000; border-right-width: 2px; }
         th, td { border: 1px solid #000; padding: 3px 6px; }
         th { background: #f0f0f0; }
         .col-no { width: 8%; text-align: center; white-space: nowrap; }
