@@ -1,10 +1,23 @@
 <?php
 require_once __DIR__ . '/../config/config.php';
 
-if (isset($_SESSION['user'])) {
-    header('Location: ' . (empty($_SESSION['redirect_after_login']) ? 'dashboard.php' : $_SESSION['redirect_after_login']));
+// After a successful login, staff who haven't set a PIN yet (needed to use
+// the scan page without a full login - see public/scan_login.php) are sent
+// to set one first, instead of straight to the dashboard/original deep link.
+function postLoginRedirect(array $sessionUser): void
+{
+    if ($sessionUser['role'] === 'staff' && empty($sessionUser['has_pin'])) {
+        header('Location: account.php?setup_pin=1');
+        exit;
+    }
+    $redirect = empty($_SESSION['redirect_after_login']) ? 'dashboard.php' : $_SESSION['redirect_after_login'];
     unset($_SESSION['redirect_after_login']);
+    header('Location: ' . $redirect);
     exit;
+}
+
+if (isset($_SESSION['user'])) {
+    postLoginRedirect($_SESSION['user']);
 }
 
 $error = '';
@@ -17,7 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน';
     } else {
         $pdo = getDbConnection();
-        $stmt = $pdo->prepare('SELECT id, username, password_hash, full_name, role FROM users WHERE username = :username AND is_active = 1');
+        $stmt = $pdo->prepare('SELECT id, username, password_hash, full_name, role, pin_hash IS NOT NULL AS has_pin
+            FROM users WHERE username = :username AND is_active = 1');
         $stmt->execute(['username' => $username]);
         $row = $stmt->fetch();
 
@@ -27,11 +41,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'username' => $row['username'],
                 'full_name' => $row['full_name'],
                 'role' => $row['role'],
+                'has_pin' => (bool) $row['has_pin'],
             ];
-            $redirect = empty($_SESSION['redirect_after_login']) ? 'dashboard.php' : $_SESSION['redirect_after_login'];
-            unset($_SESSION['redirect_after_login']);
-            header('Location: ' . $redirect);
-            exit;
+            postLoginRedirect($_SESSION['user']);
         }
 
         $error = 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง';

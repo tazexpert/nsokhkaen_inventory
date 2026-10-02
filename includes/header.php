@@ -60,6 +60,11 @@ $fullyLoggedIn = isLoggedIn();
                 </li>
                 <?php endif; ?>
             </ul>
+            <?php if ($fullyLoggedIn): ?>
+            <a href="<?= BASE_URL ?>public/account.php" class="btn btn-outline-light btn-sm me-2 <?= $currentPage === 'account.php' ? 'active' : '' ?>" title="บัญชีของฉัน">
+                <i class="bi bi-person-gear"></i>
+            </a>
+            <?php endif; ?>
             <?php if (isAdmin()): ?>
             <a href="<?= BASE_URL ?>public/settings.php" class="btn btn-outline-light btn-sm me-3 <?= $currentPage === 'settings.php' ? 'active' : '' ?>" title="ตั้งค่าระบบ">
                 <i class="bi bi-gear"></i>
