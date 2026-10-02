@@ -66,7 +66,17 @@ function formatThaiDate(string $datetime): string
     <meta charset="UTF-8">
     <title>ใบเบิกวัสดุ เลขที่ <?= htmlspecialchars($requisition['requisition_no']) ?></title>
     <style>
-        body { font-family: 'TH Sarabun New', 'Tahoma', sans-serif; font-size: 16pt; line-height: 1.15; margin: 20px; color: #000; }
+        /* mm is a physical unit, so .page's min-height matches the real A4
+           printable area consistently, unlike 100vh (which some print/PDF
+           engines size against an on-screen viewport instead of the actual
+           paper size). */
+        @page { size: A4; margin: 12mm 15mm; }
+        html, body { height: 100%; margin: 0; }
+        body { font-family: 'TH Sarabun New', 'Tahoma', sans-serif; font-size: 16pt; line-height: 1.3; color: #000; }
+        .page { min-height: calc(297mm - 24mm); box-sizing: border-box; padding: 0; display: flex; flex-direction: column; }
+        @media screen {
+            .page { min-height: 100vh; padding: 12px 20px; }
+        }
         .toolbar { margin-bottom: 15px; }
         .text-right { text-align: right; }
         .text-center { text-align: center; }
@@ -74,15 +84,19 @@ function formatThaiDate(string $datetime): string
         .subtitle { text-align: center; margin: 0 0 8px; }
         .intro { margin: 8px 0; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-        th, td { border: 1px solid #000; padding: 2px 6px; line-height: 1.1; }
+        th, td { border: 1px solid #000; padding: 4px 6px; }
         th { background: #f0f0f0; }
         .col-no { width: 6%; text-align: center; }
         .col-unit { width: 10%; text-align: center; }
         .col-qty { width: 12%; text-align: center; }
         .col-note { width: 16%; }
-        .sign-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+        /* Pushes the three signature boxes to the bottom of the page instead
+           of leaving a big gap below them when the table doesn't fill the
+           page on its own. */
+        .signatures { margin-top: auto; }
+        .sign-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px; }
         .sign-block { text-align: center; }
-        .approve-title { text-align: center; font-weight: bold; font-size: 18pt; margin-top: 12px; }
+        .approve-title { text-align: center; font-weight: bold; font-size: 18pt; margin-top: 8px; }
         @media print {
             .toolbar { display: none; }
         }
@@ -94,6 +108,7 @@ function formatThaiDate(string $datetime): string
     <a href="requisitions.php">&larr; กลับไปหน้ารายการใบเบิก</a>
 </div>
 
+<div class="page">
 <div class="text-right">เลขที่ <?= htmlspecialchars($requisition['requisition_no']) ?></div>
 <h2>ใบเบิกวัสดุ</h2>
 <p class="subtitle">สำนักงานสถิติจังหวัดขอนแก่น</p>
@@ -128,30 +143,33 @@ function formatThaiDate(string $datetime): string
     </tbody>
 </table>
 
-<div class="sign-grid">
-    <div class="sign-block">
-        <div>ลงชื่อ <?= signatureLine($requisition['creator_name']) ?> ผู้เบิก</div>
-        <div>ตำแหน่ง <?= blankIfEmpty($requisition['creator_position']) ?></div>
-        <div>วันที่ <?= formatThaiDate($requisition['created_at']) ?></div>
-    </div>
-    <div class="sign-block">
-        <div>ลงชื่อ <?= signatureLine($signatorySettings['issuer_name'] ?? null) ?> ผู้จ่ายวัสดุ</div>
-        <div>ตำแหน่ง <?= blankIfEmpty($signatorySettings['issuer_position'] ?? null) ?></div>
-        <div>วันที่ <?= formatThaiDate($requisition['created_at']) ?></div>
-    </div>
-</div>
-
-<div class="sign-grid">
-    <div>
-        <div class="approve-title">อนุญาติให้เบิกได้</div>
+<div class="signatures">
+    <div class="sign-grid">
         <div class="sign-block">
-            <div>ลงชื่อ <?= signatureLine($signatorySettings['approver_name'] ?? null) ?></div>
-            <div>ตำแหน่ง <?= blankIfEmpty($signatorySettings['approver_position'] ?? null) ?></div>
+            <div>ลงชื่อ <?= signatureLine($requisition['creator_name']) ?> ผู้เบิก</div>
+            <div>ตำแหน่ง <?= blankIfEmpty($requisition['creator_position']) ?></div>
+            <div>วันที่ <?= formatThaiDate($requisition['created_at']) ?></div>
+        </div>
+        <div class="sign-block">
+            <div>ลงชื่อ <?= signatureLine($signatorySettings['issuer_name'] ?? null) ?> ผู้จ่ายวัสดุ</div>
+            <div>ตำแหน่ง <?= blankIfEmpty($signatorySettings['issuer_position'] ?? null) ?></div>
             <div>วันที่ <?= formatThaiDate($requisition['created_at']) ?></div>
         </div>
     </div>
-    <div></div>
+
+    <div class="sign-grid">
+        <div>
+            <div class="approve-title">อนุญาติให้เบิกได้</div>
+            <div class="sign-block">
+                <div>ลงชื่อ <?= signatureLine($signatorySettings['approver_name'] ?? null) ?></div>
+                <div>ตำแหน่ง <?= blankIfEmpty($signatorySettings['approver_position'] ?? null) ?></div>
+                <div>วันที่ <?= formatThaiDate($requisition['created_at']) ?></div>
+            </div>
+        </div>
+        <div></div>
+    </div>
 </div>
 
+</div>
 </body>
 </html>
