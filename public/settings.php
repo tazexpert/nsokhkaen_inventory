@@ -133,5 +133,5 @@ requireAdmin();
     </div>
 </div>
 
-<script src="<?= BASE_URL ?>assets/js/settings.js"></script>
+<script src="<?= BASE_URL ?>assets/js/settings.js<?= assetVersion('assets/js/settings.js') ?>"></script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

@@ -35,7 +35,7 @@ $storageLocations = $pdo->query('SELECT * FROM storage_locations ORDER BY name')
 <table class="table table-striped align-middle" id="assetsTable">
     <thead>
     <tr>
-        <th>รูป</th><th>รหัส</th><th>ชื่อครุภัณฑ์</th><th>หมวดหมู่</th><th>ยี่ห้อ/รุ่น</th><th>สถานะ</th><th>ที่จัดเก็บ</th><th></th>
+        <th style="width:56px;">รูป</th><th>รหัส</th><th>ชื่อครุภัณฑ์</th><th>หมวดหมู่</th><th>ยี่ห้อ/รุ่น</th><th>สถานะ</th><th>ที่จัดเก็บ</th><th></th>
     </tr>
     </thead>
     <tbody></tbody>
@@ -146,5 +146,5 @@ $storageLocations = $pdo->query('SELECT * FROM storage_locations ORDER BY name')
     </div>
 </div>
 
-<script src="<?= BASE_URL ?>assets/js/assets.js"></script>
+<script src="<?= BASE_URL ?>assets/js/assets.js<?= assetVersion('assets/js/assets.js') ?>"></script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

@@ -35,5 +35,5 @@
 </table>
 </div>
 
-<script src="<?= BASE_URL ?>assets/js/requisitions.js"></script>
+<script src="<?= BASE_URL ?>assets/js/requisitions.js<?= assetVersion('assets/js/requisitions.js') ?>"></script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

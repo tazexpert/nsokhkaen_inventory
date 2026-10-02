@@ -51,7 +51,7 @@ function loadMaterials(keyword = '') {
             const lowStock = m.stock_qty <= m.min_stock;
             const thumb = m.image_path
                 ? `<img src="${imageUrl(m.image_path)}" alt="" style="width:40px;height:40px;object-fit:cover;" class="rounded">`
-                : `<span class="text-muted"><i class="bi bi-image"></i></span>`;
+                : `<span class="text-muted d-inline-flex align-items-center justify-content-center" style="width:40px;height:40px;"><i class="bi bi-image"></i></span>`;
             tbody.append(`
                 <tr>
                     <td>${thumb}</td>

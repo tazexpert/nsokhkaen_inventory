@@ -27,7 +27,7 @@ function loadAssets(keyword = '') {
         res.data.forEach((a) => {
             const thumb = a.image_path
                 ? `<img src="${imageUrl(a.image_path)}" alt="" style="width:40px;height:40px;object-fit:cover;" class="rounded">`
-                : `<span class="text-muted"><i class="bi bi-image"></i></span>`;
+                : `<span class="text-muted d-inline-flex align-items-center justify-content-center" style="width:40px;height:40px;"><i class="bi bi-image"></i></span>`;
             tbody.append(`
                 <tr>
                     <td>${thumb}</td>

@@ -32,7 +32,7 @@ $materialCategories = $pdo->query("SELECT * FROM categories WHERE item_type = 'm
 <table class="table table-striped align-middle" id="materialsTable">
     <thead>
     <tr>
-        <th>รูป</th><th>รหัส</th><th>ชื่อวัสดุ</th><th>หมวดหมู่</th><th>คงเหลือ</th><th>หน่วย</th><th>ต้นทุน/หน่วย</th><th>ที่จัดเก็บ</th><th></th>
+        <th style="width:56px;">รูป</th><th>รหัส</th><th>ชื่อวัสดุ</th><th>หมวดหมู่</th><th>คงเหลือ</th><th>หน่วย</th><th>ต้นทุน/หน่วย</th><th>ที่จัดเก็บ</th><th></th>
     </tr>
     </thead>
     <tbody></tbody>
@@ -145,5 +145,5 @@ $materialCategories = $pdo->query("SELECT * FROM categories WHERE item_type = 'm
     </div>
 </div>
 
-<script src="<?= BASE_URL ?>assets/js/materials.js"></script>
+<script src="<?= BASE_URL ?>assets/js/materials.js<?= assetVersion('assets/js/materials.js') ?>"></script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

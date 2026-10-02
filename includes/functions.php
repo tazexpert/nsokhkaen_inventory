@@ -158,3 +158,13 @@ function sanitizeString(?string $value): string
 {
     return trim($value ?? '');
 }
+
+// Cache-busting query string for a static asset (CSS/JS), based on its
+// last-modified time, so browsers fetch the new version immediately after
+// a deploy instead of serving a stale cached copy indefinitely.
+function assetVersion(string $relativePath): string
+{
+    $fullPath = __DIR__ . '/../' . ltrim($relativePath, '/');
+    $mtime = file_exists($fullPath) ? filemtime($fullPath) : time();
+    return '?v=' . $mtime;
+}
