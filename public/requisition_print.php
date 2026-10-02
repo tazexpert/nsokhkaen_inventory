@@ -66,14 +66,14 @@ function formatThaiDate(string $datetime): string
     <meta charset="UTF-8">
     <title>ใบเบิกวัสดุ เลขที่ <?= htmlspecialchars($requisition['requisition_no']) ?></title>
     <style>
-        body { font-family: 'TH Sarabun New', 'Tahoma', sans-serif; font-size: 16px; margin: 30px; color: #000; }
+        body { font-family: 'TH Sarabun New', 'Tahoma', sans-serif; font-size: 16pt; margin: 30px; color: #000; }
         .toolbar { margin-bottom: 20px; }
         .text-right { text-align: right; }
         .text-center { text-align: center; }
-        h2 { text-align: center; margin-bottom: 4px; }
+        h2 { text-align: center; margin-bottom: 4px; font-size: 18pt; }
         .subtitle { text-align: center; margin-top: 0; margin-bottom: 20px; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-        th, td { border: 1px solid #000; padding: 6px 8px; font-size: 15px; }
+        th, td { border: 1px solid #000; padding: 6px 8px; }
         th { background: #f0f0f0; }
         .col-no { width: 6%; text-align: center; }
         .col-unit { width: 10%; text-align: center; }
@@ -140,11 +140,16 @@ function formatThaiDate(string $datetime): string
     </div>
 </div>
 
-<div class="approve-title">อนุญาติให้เบิกได้</div>
-<div class="sign-block">
-    <div>ลงชื่อ <?= signatureLine($signatorySettings['approver_name'] ?? null) ?></div>
-    <div>ตำแหน่ง <?= blankIfEmpty($signatorySettings['approver_position'] ?? null) ?></div>
-    <div>วันที่ <?= formatThaiDate($requisition['created_at']) ?></div>
+<div class="sign-grid">
+    <div>
+        <div class="approve-title">อนุญาติให้เบิกได้</div>
+        <div class="sign-block">
+            <div>ลงชื่อ <?= signatureLine($signatorySettings['approver_name'] ?? null) ?></div>
+            <div>ตำแหน่ง <?= blankIfEmpty($signatorySettings['approver_position'] ?? null) ?></div>
+            <div>วันที่ <?= formatThaiDate($requisition['created_at']) ?></div>
+        </div>
+    </div>
+    <div></div>
 </div>
 
 </body>
