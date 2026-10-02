@@ -10,6 +10,7 @@ $storageLocations = $pdo->query('SELECT * FROM storage_locations ORDER BY name')
     <h3>จัดการครุภัณฑ์</h3>
     <div>
         <a href="qr_print.php?type=asset" target="_blank" class="btn btn-outline-secondary"><i class="bi bi-qr-code"></i> พิมพ์ QR Code</a>
+        <a href="catalog_print.php?type=asset" target="_blank" class="btn btn-outline-secondary"><i class="bi bi-journal-richtext"></i> พิมพ์แคตตาล็อก</a>
         <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#importModal"><i class="bi bi-upload"></i> นำเข้า Excel</button>
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#assetModal" onclick="resetAssetForm()"><i class="bi bi-plus-lg"></i> เพิ่มครุภัณฑ์</button>
     </div>
