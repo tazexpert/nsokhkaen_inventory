@@ -137,18 +137,20 @@ function handleImageUpload(string $fieldName, string $subfolder, string $code): 
     return 'uploads/' . $subfolder . '/' . $filename;
 }
 
-// Borrower PINs (ผู้ยืม) identify someone borrowing an asset without
-// requiring them to have a full system login. Stored hashed exactly like
-// user passwords; since each hash is independently salted, uniqueness of
-// the plaintext PIN has to be checked by trying every active borrower's
-// hash rather than by a database constraint.
+// A user's PIN identifies them when borrowing an asset on the scan page
+// without requiring a full system login - no separate "borrower" table,
+// any row in `users` can optionally have a pin_hash set (in addition to,
+// or instead of, username/password). Stored hashed exactly like
+// passwords; since each hash is independently salted, uniqueness of the
+// plaintext PIN has to be checked by trying every active user's hash
+// rather than by a database constraint.
 
-// Finds the active borrower whose PIN matches, or null if none does.
-// Used both to verify a PIN typed on the scan page and to enforce
-// PIN uniqueness when creating/editing a borrower.
-function findBorrowerByPin(PDO $pdo, string $pin, ?int $excludeId = null): ?array
+// Finds the active user whose PIN matches, or null if none does. Used
+// both to identify the borrower when adding an asset to a requisition
+// cart and to enforce PIN uniqueness when setting/changing a PIN.
+function findUserByPin(PDO $pdo, string $pin, ?int $excludeId = null): ?array
 {
-    $sql = 'SELECT * FROM borrowers WHERE is_active = 1';
+    $sql = 'SELECT * FROM users WHERE is_active = 1 AND pin_hash IS NOT NULL';
     $params = [];
     if ($excludeId !== null) {
         $sql .= ' AND id != :exclude_id';
@@ -158,9 +160,9 @@ function findBorrowerByPin(PDO $pdo, string $pin, ?int $excludeId = null): ?arra
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
 
-    foreach ($stmt->fetchAll() as $borrower) {
-        if (password_verify($pin, $borrower['pin_hash'])) {
-            return $borrower;
+    foreach ($stmt->fetchAll() as $candidate) {
+        if (password_verify($pin, $candidate['pin_hash'])) {
+            return $candidate;
         }
     }
 

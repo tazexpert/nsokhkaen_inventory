@@ -32,14 +32,16 @@ switch ($action) {
 
 function listUsers(PDO $pdo): void
 {
-    $stmt = $pdo->query('SELECT id, username, full_name, role, is_active, created_at FROM users ORDER BY id');
+    $stmt = $pdo->query('SELECT id, username, full_name, position, role, is_active,
+        (pin_hash IS NOT NULL) AS has_pin, created_at FROM users ORDER BY id');
     jsonResponse(['success' => true, 'data' => $stmt->fetchAll()]);
 }
 
 function getUser(PDO $pdo): void
 {
     $id = (int) ($_GET['id'] ?? 0);
-    $stmt = $pdo->prepare('SELECT id, username, full_name, role, is_active FROM users WHERE id = :id');
+    $stmt = $pdo->prepare('SELECT id, username, full_name, position, role, is_active,
+        (pin_hash IS NOT NULL) AS has_pin FROM users WHERE id = :id');
     $stmt->execute(['id' => $id]);
     $row = $stmt->fetch();
     if (!$row) {
@@ -48,27 +50,54 @@ function getUser(PDO $pdo): void
     jsonResponse(['success' => true, 'data' => $row]);
 }
 
+// A user needs a username+password pair (both or neither), a PIN, or
+// both - never none of the above, or they'd have no way to be identified
+// by the system at all.
+function validateLoginAndPin(string $username, string $password, string $pin): void
+{
+    if (($username !== '') !== ($password !== '')) {
+        jsonResponse(['success' => false, 'message' => 'กรุณากรอกทั้งชื่อผู้ใช้และรหัสผ่านคู่กัน หรือเว้นว่างทั้งคู่'], 422);
+    }
+    if ($password !== '' && strlen($password) < 6) {
+        jsonResponse(['success' => false, 'message' => 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร'], 422);
+    }
+    if ($pin !== '' && !preg_match('/^\d{6}$/', $pin)) {
+        jsonResponse(['success' => false, 'message' => 'PIN ต้องเป็นตัวเลข 6 หลัก'], 422);
+    }
+}
+
 function createUser(PDO $pdo): void
 {
     $username = sanitizeString($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
     $fullName = sanitizeString($_POST['full_name'] ?? '');
+    $position = sanitizeString($_POST['position'] ?? '');
     $role = sanitizeString($_POST['role'] ?? 'staff');
+    $pin = sanitizeString($_POST['pin'] ?? '');
 
-    if ($username === '' || $fullName === '' || strlen($password) < 6) {
-        jsonResponse(['success' => false, 'message' => 'กรุณากรอกข้อมูลให้ครบถ้วน (รหัสผ่านอย่างน้อย 6 ตัวอักษร)'], 422);
+    if ($fullName === '') {
+        jsonResponse(['success' => false, 'message' => 'กรุณาระบุชื่อ-นามสกุล'], 422);
     }
-
     if (!in_array($role, ['admin', 'staff'], true)) {
         jsonResponse(['success' => false, 'message' => 'สิทธิ์การใช้งานไม่ถูกต้อง'], 422);
     }
+    validateLoginAndPin($username, $password, $pin);
+    if ($username === '' && $pin === '') {
+        jsonResponse(['success' => false, 'message' => 'ต้องตั้งชื่อผู้ใช้+รหัสผ่าน (สำหรับเข้าสู่ระบบ) หรือ PIN (สำหรับยืมครุภัณฑ์) อย่างน้อยหนึ่งอย่าง'], 422);
+    }
+    if ($pin !== '' && findUserByPin($pdo, $pin) !== null) {
+        jsonResponse(['success' => false, 'message' => 'PIN นี้มีผู้ใช้งานอยู่แล้ว กรุณาใช้ PIN อื่น'], 422);
+    }
 
     try {
-        $stmt = $pdo->prepare('INSERT INTO users (username, password_hash, full_name, role) VALUES (:username, :password_hash, :full_name, :role)');
+        $stmt = $pdo->prepare('INSERT INTO users (username, password_hash, full_name, position, pin_hash, role)
+            VALUES (:username, :password_hash, :full_name, :position, :pin_hash, :role)');
         $stmt->execute([
-            'username' => $username,
-            'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+            'username' => $username ?: null,
+            'password_hash' => $password !== '' ? password_hash($password, PASSWORD_DEFAULT) : null,
             'full_name' => $fullName,
+            'position' => $position ?: null,
+            'pin_hash' => $pin !== '' ? password_hash($pin, PASSWORD_DEFAULT) : null,
             'role' => $role,
         ]);
     } catch (PDOException $e) {
@@ -84,33 +113,75 @@ function createUser(PDO $pdo): void
 function updateUser(PDO $pdo): void
 {
     $id = (int) ($_POST['id'] ?? 0);
+    $username = sanitizeString($_POST['username'] ?? '');
     $fullName = sanitizeString($_POST['full_name'] ?? '');
+    $position = sanitizeString($_POST['position'] ?? '');
     $role = sanitizeString($_POST['role'] ?? 'staff');
     $password = $_POST['password'] ?? '';
+    $pin = sanitizeString($_POST['pin'] ?? '');
+    $removePin = ($_POST['remove_pin'] ?? '') === '1';
 
     if (!$id || $fullName === '') {
         jsonResponse(['success' => false, 'message' => 'ข้อมูลไม่ถูกต้อง'], 422);
     }
-
     if (!in_array($role, ['admin', 'staff'], true)) {
         jsonResponse(['success' => false, 'message' => 'สิทธิ์การใช้งานไม่ถูกต้อง'], 422);
     }
 
+    $currentStmt = $pdo->prepare('SELECT username, password_hash FROM users WHERE id = :id');
+    $currentStmt->execute(['id' => $id]);
+    $current = $currentStmt->fetch();
+    if (!$current) {
+        jsonResponse(['success' => false, 'message' => 'ไม่พบข้อมูลผู้ใช้งาน'], 404);
+    }
+    // A password is only required when (re)setting a username for a user who
+    // doesn't already have login credentials - otherwise their existing
+    // password hash is simply kept as-is.
+    if ($username !== '' && $current['password_hash'] === null && $password === '') {
+        jsonResponse(['success' => false, 'message' => 'กรุณากรอกรหัสผ่านสำหรับการเข้าสู่ระบบ'], 422);
+    }
+    if ($password !== '' && $username === '') {
+        jsonResponse(['success' => false, 'message' => 'กรุณากรอกชื่อผู้ใช้คู่กับรหัสผ่านใหม่'], 422);
+    }
     if ($password !== '' && strlen($password) < 6) {
         jsonResponse(['success' => false, 'message' => 'รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร'], 422);
     }
+    if ($pin !== '') {
+        if (!preg_match('/^\d{6}$/', $pin)) {
+            jsonResponse(['success' => false, 'message' => 'PIN ต้องเป็นตัวเลข 6 หลัก'], 422);
+        }
+        if (findUserByPin($pdo, $pin, $id) !== null) {
+            jsonResponse(['success' => false, 'message' => 'PIN นี้มีผู้ใช้งานอยู่แล้ว กรุณาใช้ PIN อื่น'], 422);
+        }
+    }
 
+    $sql = 'UPDATE users SET full_name = :full_name, position = :position, role = :role';
+    $params = ['full_name' => $fullName, 'position' => $position ?: null, 'role' => $role, 'id' => $id];
+
+    if ($username !== '') {
+        $sql .= ', username = :username';
+        $params['username'] = $username;
+    }
     if ($password !== '') {
-        $stmt = $pdo->prepare('UPDATE users SET full_name = :full_name, role = :role, password_hash = :password_hash WHERE id = :id');
-        $stmt->execute([
-            'full_name' => $fullName,
-            'role' => $role,
-            'password_hash' => password_hash($password, PASSWORD_DEFAULT),
-            'id' => $id,
-        ]);
-    } else {
-        $stmt = $pdo->prepare('UPDATE users SET full_name = :full_name, role = :role WHERE id = :id');
-        $stmt->execute(['full_name' => $fullName, 'role' => $role, 'id' => $id]);
+        $sql .= ', password_hash = :password_hash';
+        $params['password_hash'] = password_hash($password, PASSWORD_DEFAULT);
+    }
+    if ($pin !== '') {
+        $sql .= ', pin_hash = :pin_hash';
+        $params['pin_hash'] = password_hash($pin, PASSWORD_DEFAULT);
+    } elseif ($removePin) {
+        $sql .= ', pin_hash = NULL';
+    }
+
+    $sql .= ' WHERE id = :id';
+
+    try {
+        $pdo->prepare($sql)->execute($params);
+    } catch (PDOException $e) {
+        if ($e->getCode() === '23000') {
+            jsonResponse(['success' => false, 'message' => 'มีชื่อผู้ใช้นี้อยู่แล้ว'], 422);
+        }
+        throw $e;
     }
 
     jsonResponse(['success' => true, 'message' => 'แก้ไขข้อมูลผู้ใช้งานเรียบร้อยแล้ว']);

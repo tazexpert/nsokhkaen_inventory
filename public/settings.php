@@ -13,9 +13,6 @@ requireAdmin();
         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabLocations">สถานที่จัดเก็บ</button>
     </li>
     <li class="nav-item">
-        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabBorrowers">ผู้ยืม (PIN)</button>
-    </li>
-    <li class="nav-item">
         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabApp">ค่าพื้นฐานระบบ</button>
     </li>
 </ul>
@@ -23,6 +20,11 @@ requireAdmin();
 <div class="tab-content">
     <!-- ผู้ใช้งาน -->
     <div class="tab-pane fade show active" id="tabUsers">
+        <p class="text-muted">
+            ผู้ใช้งานแต่ละคนสามารถมี <strong>ชื่อผู้ใช้+รหัสผ่าน</strong> (สำหรับเข้าสู่ระบบ), <strong>PIN 6 หลัก</strong>
+            (สำหรับยืมครุภัณฑ์ผ่านหน้าสแกน QR Code โดยไม่ต้องล็อกอิน), หรือทั้งสองอย่างก็ได้ — PIN แต่ละคนต้องไม่ซ้ำกัน
+            และถูกเก็บในฐานข้อมูลแบบ hash เช่นเดียวกับรหัสผ่าน (กู้คืน PIN เดิมไม่ได้ ต้องตั้งใหม่หากลืม)
+        </p>
         <div class="d-flex justify-content-end mb-3">
             <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#userModal" onclick="resetUserForm()">
                 <i class="bi bi-plus-lg"></i> เพิ่มผู้ใช้งาน
@@ -31,7 +33,7 @@ requireAdmin();
         <div class="table-responsive">
             <table class="table table-striped align-middle" id="usersTable">
                 <thead>
-                <tr><th>ชื่อผู้ใช้</th><th>ชื่อ-นามสกุล</th><th>สิทธิ์</th><th>สถานะ</th><th></th></tr>
+                <tr><th>ชื่อผู้ใช้</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th>PIN</th><th>สิทธิ์</th><th>สถานะ</th><th></th></tr>
                 </thead>
                 <tbody></tbody>
             </table>
@@ -60,27 +62,6 @@ requireAdmin();
                     </table>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- ผู้ยืม (PIN) -->
-    <div class="tab-pane fade" id="tabBorrowers">
-        <p class="text-muted">
-            รายชื่อผู้ที่สามารถยืมครุภัณฑ์ผ่านหน้าสแกน QR Code โดยกรอก PIN 6 หลักของตัวเองแทนการล็อกอินเข้าระบบ
-            PIN แต่ละคนต้องไม่ซ้ำกัน และถูกเก็บในฐานข้อมูลแบบ hash เช่นเดียวกับรหัสผ่านผู้ใช้งาน (กู้คืน PIN เดิมไม่ได้ ต้องตั้งใหม่หากลืม)
-        </p>
-        <div class="d-flex justify-content-end mb-3">
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#borrowerModal" onclick="resetBorrowerForm()">
-                <i class="bi bi-plus-lg"></i> เพิ่มผู้ยืม
-            </button>
-        </div>
-        <div class="table-responsive">
-            <table class="table table-striped align-middle" id="borrowersTable">
-                <thead>
-                <tr><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th></th></tr>
-                </thead>
-                <tbody></tbody>
-            </table>
         </div>
     </div>
 
@@ -128,12 +109,12 @@ requireAdmin();
                 <form id="userForm">
                     <input type="hidden" id="u_id">
                     <div class="mb-3">
-                        <label class="form-label">ชื่อผู้ใช้ (Username)</label>
-                        <input type="text" class="form-control" id="u_username" required>
-                    </div>
-                    <div class="mb-3">
                         <label class="form-label">ชื่อ-นามสกุล</label>
                         <input type="text" class="form-control" id="u_full_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">ตำแหน่ง</label>
+                        <input type="text" class="form-control" id="u_position">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">สิทธิ์การใช้งาน</label>
@@ -142,50 +123,33 @@ requireAdmin();
                             <option value="admin">ผู้ดูแลระบบ (Admin)</option>
                         </select>
                     </div>
+                    <hr>
+                    <div class="form-text mb-2">สำหรับเข้าสู่ระบบ (กรอกทั้งคู่ หรือเว้นว่างทั้งคู่)</div>
+                    <div class="mb-3">
+                        <label class="form-label">ชื่อผู้ใช้ (Username)</label>
+                        <input type="text" class="form-control" id="u_username">
+                    </div>
                     <div class="mb-3">
                         <label class="form-label" id="u_password_label">รหัสผ่าน</label>
                         <input type="password" class="form-control" id="u_password" placeholder="อย่างน้อย 6 ตัวอักษร">
                         <div class="form-text" id="u_password_hint" style="display:none;">เว้นว่างไว้หากไม่ต้องการเปลี่ยนรหัสผ่าน</div>
+                    </div>
+                    <hr>
+                    <div class="form-text mb-2">สำหรับยืมครุภัณฑ์ผ่านหน้าสแกน QR Code โดยไม่ต้องล็อกอิน</div>
+                    <div class="mb-3">
+                        <label class="form-label" id="u_pin_label">PIN (6 หลัก)</label>
+                        <input type="password" inputmode="numeric" pattern="\d{6}" maxlength="6" class="form-control" id="u_pin" placeholder="เช่น 123456" autocomplete="off">
+                        <div class="form-text" id="u_pin_hint" style="display:none;">เว้นว่างไว้หากไม่ต้องการเปลี่ยน PIN เดิม</div>
+                        <div class="form-check mt-2" id="u_remove_pin_wrap" style="display:none;">
+                            <input class="form-check-input" type="checkbox" id="u_remove_pin">
+                            <label class="form-check-label" for="u_remove_pin">ลบ PIN เดิม (ยกเลิกสิทธิ์ยืมด้วย PIN)</label>
+                        </div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
                 <button class="btn btn-primary" onclick="saveUser()">บันทึก</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Add/Edit borrower modal -->
-<div class="modal fade" id="borrowerModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="borrowerModalTitle">เพิ่มผู้ยืม</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="borrowerForm">
-                    <input type="hidden" id="b_id">
-                    <div class="mb-3">
-                        <label class="form-label">ชื่อ-นามสกุล</label>
-                        <input type="text" class="form-control" id="b_full_name" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">ตำแหน่ง</label>
-                        <input type="text" class="form-control" id="b_position">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label" id="b_pin_label">PIN (6 หลัก)</label>
-                        <input type="password" inputmode="numeric" pattern="\d{6}" maxlength="6" class="form-control" id="b_pin" placeholder="เช่น 123456" autocomplete="off">
-                        <div class="form-text" id="b_pin_hint" style="display:none;">เว้นว่างไว้หากไม่ต้องการเปลี่ยน PIN เดิม</div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-                <button class="btn btn-primary" onclick="saveBorrower()">บันทึก</button>
             </div>
         </div>
     </div>

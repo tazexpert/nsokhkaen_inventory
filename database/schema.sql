@@ -11,30 +11,26 @@ USE nsokhkaen_inventory;
 
 -- ------------------------------------------------------------
 -- Users & Roles
+--
+-- One table covers both full system logins (username+password, used by
+-- admin/staff to use the app) and "borrower-only" people who just need
+-- to identify themselves with a 6-digit PIN when borrowing an asset on
+-- the scan page, without needing a login at all. A row can have either
+-- or both: username+password_hash are NULL for a PIN-only borrower, and
+-- pin_hash is NULL for someone who only ever logs in normally. PINs are
+-- hashed the same way as passwords (password_hash()); uniqueness of the
+-- plaintext PIN is enforced by the app (findUserByPin() in
+-- includes/functions.php), not by the database, since the hash itself
+-- is salted/unique per row.
 -- ------------------------------------------------------------
 CREATE TABLE users (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    full_name VARCHAR(150) NOT NULL,
-    role ENUM('admin', 'staff') NOT NULL DEFAULT 'staff',
-    is_active TINYINT(1) NOT NULL DEFAULT 1,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
-
--- ------------------------------------------------------------
--- Borrowers (ผู้ยืม) - people who borrow assets, identified by a 6-digit
--- PIN instead of a full system login. PINs are hashed the same way as
--- user passwords; uniqueness of the plaintext PIN is enforced by the
--- app (findBorrowerByPin()/isPinUnique() in includes/functions.php),
--- not by the database, since the hash itself is salted/unique per row.
--- ------------------------------------------------------------
-CREATE TABLE borrowers (
-    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NULL UNIQUE,
+    password_hash VARCHAR(255) NULL,
     full_name VARCHAR(150) NOT NULL,
     position VARCHAR(150) NULL,
-    pin_hash VARCHAR(255) NOT NULL,
+    pin_hash VARCHAR(255) NULL,
+    role ENUM('admin', 'staff') NOT NULL DEFAULT 'staff',
     is_active TINYINT(1) NOT NULL DEFAULT 1,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -186,7 +182,7 @@ CREATE TABLE asset_transactions (
 -- Mock data
 -- ------------------------------------------------------------
 
--- password for both accounts is: password123
+-- password for both login accounts is: password123
 INSERT INTO users (username, password_hash, full_name, role) VALUES
 ('admin', '$2y$12$fuD/beirJBBABd/usQP9oebzSe8/YoNL6kdSYTJ7nqg.ba.anUcFO', 'ผู้ดูแลระบบ', 'admin'),
 ('staff1', '$2y$12$fuD/beirJBBABd/usQP9oebzSe8/YoNL6kdSYTJ7nqg.ba.anUcFO', 'เจ้าหน้าที่พัสดุ', 'staff');
@@ -195,9 +191,10 @@ INSERT INTO settings (`key`, `value`) VALUES
 ('app_name', 'ระบบบริหารจัดการวัสดุและครุภัณฑ์ สำนักงานสถิติจังหวัดขอนแก่น'),
 ('app_url', 'http://localhost/nsokhkaen_inventory/');
 
--- PIN for this sample borrower is: 123456
-INSERT INTO borrowers (full_name, position, pin_hash) VALUES
-('สมชาย ใจดี', 'นักวิชาการสถิติ', '$2y$12$.j5xtxjAE9aiY43Z0e2S2eQruqs2kI/HnzKRzqcHlNqqLwgtUtLrW');
+-- Sample PIN-only "borrower" row - no username/password, can't log in,
+-- only identifiable by PIN when borrowing an asset. PIN is: 123456
+INSERT INTO users (full_name, position, pin_hash, role) VALUES
+('สมชาย ใจดี', 'นักวิชาการสถิติ', '$2y$12$.j5xtxjAE9aiY43Z0e2S2eQruqs2kI/HnzKRzqcHlNqqLwgtUtLrW', 'staff');
 
 INSERT INTO storage_locations (name) VALUES
 ('ห้องพัสดุ ชั้น 1'),

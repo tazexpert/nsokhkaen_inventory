@@ -1,7 +1,6 @@
 const USERS_API = BASE_URL_JS + 'api/users_api.php';
 const LOCATIONS_API = BASE_URL_JS + 'api/storage_locations_api.php';
 const SETTINGS_API = BASE_URL_JS + 'api/settings_api.php';
-const BORROWERS_API = BASE_URL_JS + 'api/borrowers_api.php';
 
 const ROLE_LABEL = { admin: 'ผู้ดูแลระบบ', staff: 'เจ้าหน้าที่' };
 
@@ -13,8 +12,10 @@ function loadUsers() {
         res.data.forEach((u) => {
             tbody.append(`
                 <tr>
-                    <td>${u.username}</td>
+                    <td>${u.username || '-'}</td>
                     <td>${u.full_name}</td>
+                    <td>${u.position || '-'}</td>
+                    <td>${Number(u.has_pin) ? '<span class="badge bg-info">ตั้งแล้ว</span>' : '-'}</td>
                     <td>${ROLE_LABEL[u.role] || u.role}</td>
                     <td>${Number(u.is_active) ? '<span class="badge bg-success">ใช้งานอยู่</span>' : '<span class="badge bg-secondary">ปิดใช้งาน</span>'}</td>
                     <td class="text-end">
@@ -31,9 +32,12 @@ function loadUsers() {
 function resetUserForm() {
     $('#userForm')[0].reset();
     $('#u_id').val('');
-    $('#u_username').prop('disabled', false);
     $('#u_password_hint').hide();
     $('#u_password').attr('placeholder', 'อย่างน้อย 6 ตัวอักษร');
+    $('#u_pin_hint').hide();
+    $('#u_pin').attr('placeholder', 'เช่น 123456');
+    $('#u_remove_pin_wrap').hide();
+    $('#u_remove_pin').prop('checked', false);
     $('#userModalTitle').text('เพิ่มผู้ใช้งาน');
 }
 
@@ -41,12 +45,17 @@ function editUser(id) {
     $.get(USERS_API, { action: 'get', id }, function (res) {
         const u = res.data;
         $('#u_id').val(u.id);
-        $('#u_username').val(u.username).prop('disabled', true);
+        $('#u_username').val(u.username);
         $('#u_full_name').val(u.full_name);
+        $('#u_position').val(u.position);
         $('#u_role').val(u.role);
         $('#u_password').val('').attr('placeholder', '');
         $('#u_password_hint').show();
-        $('#userModalTitle').text('แก้ไขผู้ใช้งาน: ' + u.username);
+        $('#u_pin').val('').attr('placeholder', '');
+        $('#u_pin_hint').show();
+        $('#u_remove_pin').prop('checked', false);
+        $('#u_remove_pin_wrap').toggle(!!Number(u.has_pin));
+        $('#userModalTitle').text('แก้ไขผู้ใช้งาน: ' + u.full_name);
         new bootstrap.Modal('#userModal').show();
     });
 }
@@ -58,8 +67,11 @@ function saveUser() {
         id,
         username: $('#u_username').val(),
         full_name: $('#u_full_name').val(),
+        position: $('#u_position').val(),
         role: $('#u_role').val(),
         password: $('#u_password').val(),
+        pin: $('#u_pin').val(),
+        remove_pin: $('#u_remove_pin').is(':checked') ? '1' : '0',
     };
     $.post(USERS_API, payload)
         .done((res) => {
@@ -119,74 +131,6 @@ function deleteStorageLocation(id) {
         .fail((xhr) => alert(xhr.responseJSON?.message || 'เกิดข้อผิดพลาด'));
 }
 
-/* ---------------- Borrowers (PIN) ---------------- */
-
-let borrowersCache = [];
-
-function loadBorrowers() {
-    $.get(BORROWERS_API, { action: 'list' }, function (res) {
-        borrowersCache = res.data;
-        const tbody = $('#borrowersTable tbody').empty();
-        res.data.forEach((b) => {
-            tbody.append(`
-                <tr>
-                    <td>${b.full_name}</td>
-                    <td>${b.position || '-'}</td>
-                    <td class="text-end">
-                        <button class="btn btn-sm btn-outline-primary" onclick="editBorrower(${b.id})"><i class="bi bi-pencil"></i></button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteBorrower(${b.id})"><i class="bi bi-trash"></i></button>
-                    </td>
-                </tr>
-            `);
-        });
-    });
-}
-
-function resetBorrowerForm() {
-    $('#borrowerForm')[0].reset();
-    $('#b_id').val('');
-    $('#b_pin_hint').hide();
-    $('#b_pin').attr('placeholder', 'เช่น 123456').prop('required', true);
-    $('#borrowerModalTitle').text('เพิ่มผู้ยืม');
-}
-
-function editBorrower(id) {
-    const b = borrowersCache.find((x) => x.id === id);
-    if (!b) return;
-    $('#b_id').val(b.id);
-    $('#b_full_name').val(b.full_name);
-    $('#b_position').val(b.position);
-    $('#b_pin').val('').attr('placeholder', '').prop('required', false);
-    $('#b_pin_hint').show();
-    $('#borrowerModalTitle').text('แก้ไขผู้ยืม: ' + b.full_name);
-    new bootstrap.Modal('#borrowerModal').show();
-}
-
-function saveBorrower() {
-    const id = $('#b_id').val();
-    const payload = {
-        action: id ? 'update' : 'create',
-        id,
-        full_name: $('#b_full_name').val(),
-        position: $('#b_position').val(),
-        pin: $('#b_pin').val(),
-    };
-    $.post(BORROWERS_API, payload)
-        .done((res) => {
-            alert(res.message);
-            bootstrap.Modal.getInstance(document.getElementById('borrowerModal')).hide();
-            loadBorrowers();
-        })
-        .fail((xhr) => alert(xhr.responseJSON?.message || 'เกิดข้อผิดพลาด'));
-}
-
-function deleteBorrower(id) {
-    if (!confirm('ยืนยันการลบผู้ยืมนี้?')) return;
-    $.post(BORROWERS_API, { action: 'delete', id })
-        .done((res) => { alert(res.message); loadBorrowers(); })
-        .fail((xhr) => alert(xhr.responseJSON?.message || 'เกิดข้อผิดพลาด'));
-}
-
 /* ---------------- App settings ---------------- */
 
 function loadAppSettings() {
@@ -216,6 +160,5 @@ function saveAppSettings() {
 $(document).ready(() => {
     loadUsers();
     loadStorageLocations();
-    loadBorrowers();
     loadAppSettings();
 });

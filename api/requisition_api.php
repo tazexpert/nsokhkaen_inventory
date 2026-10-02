@@ -130,7 +130,7 @@ function cartAddAsset(PDO $pdo): void
     }
 
     // Identifies the borrower without requiring them to have a system login.
-    $borrower = findBorrowerByPin($pdo, $pin);
+    $borrower = findUserByPin($pdo, $pin);
     if ($borrower === null) {
         jsonResponse(['success' => false, 'message' => 'ไม่พบผู้ยืมที่ใช้ PIN นี้ กรุณาตรวจสอบ PIN อีกครั้ง'], 422);
     }
