@@ -43,6 +43,15 @@ function blankIfEmpty(?string $value, int $dots = 66): string
     return $value !== '' ? htmlspecialchars($value) : str_repeat('.', $dots);
 }
 
+// The "ลงชื่อ..." line: the dots ARE the signature line, so when the name is
+// known it replaces the dots directly instead of being printed separately
+// above a second line.
+function signatureLine(?string $name, int $dots = 43): string
+{
+    $name = trim($name ?? '');
+    return $name !== '' ? htmlspecialchars($name) : str_repeat('.', $dots);
+}
+
 function formatThaiDate(string $datetime): string
 {
     $months = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
@@ -70,9 +79,8 @@ function formatThaiDate(string $datetime): string
         .col-unit { width: 10%; text-align: center; }
         .col-qty { width: 12%; text-align: center; }
         .col-note { width: 16%; }
-        .sign-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 40px; }
+        .sign-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 60px; }
         .sign-block { text-align: center; }
-        .sign-line { margin: 40px 0 6px; border-bottom: 1px dotted #000; }
         .approve-title { text-align: center; font-weight: bold; margin-top: 40px; }
         @media print {
             .toolbar { display: none; }
@@ -121,14 +129,12 @@ function formatThaiDate(string $datetime): string
 
 <div class="sign-grid">
     <div class="sign-block">
-        <div class="sign-line"><?= htmlspecialchars($requisition['creator_name']) ?></div>
-        <div>ลงชื่อ...........................................ผู้เบิก</div>
+        <div>ลงชื่อ <?= signatureLine($requisition['creator_name']) ?> ผู้เบิก</div>
         <div>ตำแหน่ง <?= blankIfEmpty($requisition['creator_position']) ?></div>
         <div>วันที่ <?= formatThaiDate($requisition['created_at']) ?></div>
     </div>
     <div class="sign-block">
-        <div class="sign-line"><?= blankIfEmpty($signatorySettings['issuer_name'] ?? null, 0) ?></div>
-        <div>ลงชื่อ...........................................ผู้จ่าย</div>
+        <div>ลงชื่อ <?= signatureLine($signatorySettings['issuer_name'] ?? null) ?> ผู้จ่ายวัสดุ</div>
         <div>ตำแหน่ง <?= blankIfEmpty($signatorySettings['issuer_position'] ?? null) ?></div>
         <div>วันที่ <?= formatThaiDate($requisition['created_at']) ?></div>
     </div>
@@ -136,10 +142,9 @@ function formatThaiDate(string $datetime): string
 
 <div class="approve-title">อนุญาติให้เบิกได้</div>
 <div class="sign-block">
-    <div class="sign-line" style="width: 300px; margin-left: auto; margin-right: auto;"><?= htmlspecialchars($signatorySettings['approver_name'] ?? '') ?></div>
-    <div>ลงชื่อ...........................................ผู้รับพัสดุ</div>
+    <div>ลงชื่อ <?= signatureLine($signatorySettings['approver_name'] ?? null) ?></div>
     <div>ตำแหน่ง <?= blankIfEmpty($signatorySettings['approver_position'] ?? null) ?></div>
-    <div>วันที่..................................................................................</div>
+    <div>วันที่ <?= formatThaiDate($requisition['created_at']) ?></div>
 </div>
 
 </body>
