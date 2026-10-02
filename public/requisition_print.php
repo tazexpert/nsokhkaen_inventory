@@ -6,8 +6,13 @@ requireLogin();
 $pdo = getDbConnection();
 $id = (int) ($_GET['id'] ?? 0);
 
-$stmt = $pdo->prepare('SELECT r.*, u.full_name AS issued_by_name FROM requisitions r
-    JOIN users u ON u.id = r.created_by WHERE r.id = :id');
+// ผู้เบิก (requester) on the printout is the logged-in account that actually
+// submitted the slip (u.full_name/u.position), not the free-text
+// requester_name/requester_position fields - those can be filled in for
+// someone else (e.g. a staff member recording a request on a colleague's
+// behalf) and aren't necessarily the person who should sign as ผู้เบิก here.
+$stmt = $pdo->prepare('SELECT r.*, u.full_name AS creator_name, u.position AS creator_position
+    FROM requisitions r JOIN users u ON u.id = r.created_by WHERE r.id = :id');
 $stmt->execute(['id' => $id]);
 $requisition = $stmt->fetch();
 
@@ -16,12 +21,27 @@ if (!$requisition) {
     die('ไม่พบใบเบิกที่ร้องขอ');
 }
 
+// ผู้จ่าย (issuer) and the approver signing under "อนุญาติให้เบิกได้" are
+// normally the same one or two people on every slip, so they're configured
+// once in "ตั้งค่าระบบ" instead of being typed by hand on each printout.
+$settingsStmt = $pdo->query("SELECT `key`, `value` FROM settings
+    WHERE `key` IN ('issuer_name', 'issuer_position', 'approver_name', 'approver_position')");
+$signatorySettings = array_column($settingsStmt->fetchAll(), 'value', 'key');
+
 $itemsStmt = $pdo->prepare('SELECT * FROM requisition_items WHERE requisition_id = :id ORDER BY id');
 $itemsStmt->execute(['id' => $id]);
 $items = $itemsStmt->fetchAll();
 
 $minRows = 12;
 $blankRows = max(0, $minRows - count($items));
+
+// Keeps the paper-form look of a blank line to sign/write on when a value
+// isn't set, instead of a label with nothing after it.
+function blankIfEmpty(?string $value, int $dots = 66): string
+{
+    $value = trim($value ?? '');
+    return $value !== '' ? htmlspecialchars($value) : str_repeat('.', $dots);
+}
 
 function formatThaiDate(string $datetime): string
 {
@@ -101,24 +121,24 @@ function formatThaiDate(string $datetime): string
 
 <div class="sign-grid">
     <div class="sign-block">
-        <div class="sign-line"><?= htmlspecialchars($requisition['requester_name'] ?? '') ?></div>
+        <div class="sign-line"><?= htmlspecialchars($requisition['creator_name']) ?></div>
         <div>ลงชื่อ...........................................ผู้เบิก</div>
-        <div>ตำแหน่ง <?= htmlspecialchars($requisition['requester_position'] ?? '') ?></div>
+        <div>ตำแหน่ง <?= blankIfEmpty($requisition['creator_position']) ?></div>
         <div>วันที่ <?= formatThaiDate($requisition['created_at']) ?></div>
     </div>
     <div class="sign-block">
-        <div class="sign-line"><?= htmlspecialchars($requisition['issued_by_name']) ?></div>
+        <div class="sign-line"><?= blankIfEmpty($signatorySettings['issuer_name'] ?? null, 0) ?></div>
         <div>ลงชื่อ...........................................ผู้จ่าย</div>
-        <div>ตำแหน่ง..................................................................................</div>
+        <div>ตำแหน่ง <?= blankIfEmpty($signatorySettings['issuer_position'] ?? null) ?></div>
         <div>วันที่ <?= formatThaiDate($requisition['created_at']) ?></div>
     </div>
 </div>
 
 <div class="approve-title">อนุญาติให้เบิกได้</div>
 <div class="sign-block">
-    <div class="sign-line" style="width: 300px; margin-left: auto; margin-right: auto;"></div>
+    <div class="sign-line" style="width: 300px; margin-left: auto; margin-right: auto;"><?= htmlspecialchars($signatorySettings['approver_name'] ?? '') ?></div>
     <div>ลงชื่อ...........................................ผู้รับพัสดุ</div>
-    <div>ตำแหน่ง..................................................................................</div>
+    <div>ตำแหน่ง <?= blankIfEmpty($signatorySettings['approver_position'] ?? null) ?></div>
     <div>วันที่..................................................................................</div>
 </div>
 

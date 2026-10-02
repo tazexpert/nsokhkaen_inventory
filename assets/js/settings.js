@@ -138,6 +138,10 @@ function loadAppSettings() {
         $('#s_app_name').val(res.data.app_name || '');
         $('#s_app_url').val(res.data.app_url || '');
         $('#s_base_url').val(res.data.base_url || '');
+        $('#s_issuer_name').val(res.data.issuer_name || '');
+        $('#s_issuer_position').val(res.data.issuer_position || '');
+        $('#s_approver_name').val(res.data.approver_name || '');
+        $('#s_approver_position').val(res.data.approver_position || '');
     });
 }
 
@@ -146,6 +150,10 @@ function saveAppSettings() {
         action: 'update',
         app_name: $('#s_app_name').val(),
         app_url: $('#s_app_url').val(),
+        issuer_name: $('#s_issuer_name').val(),
+        issuer_position: $('#s_issuer_position').val(),
+        approver_name: $('#s_approver_name').val(),
+        approver_position: $('#s_approver_position').val(),
     };
     $.post(SETTINGS_API, payload)
         .done((res) => {

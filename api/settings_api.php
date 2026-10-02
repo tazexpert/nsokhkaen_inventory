@@ -33,6 +33,16 @@ function updateSettings(PDO $pdo): void
 {
     $appName = sanitizeString($_POST['app_name'] ?? '');
     $appUrl = sanitizeString($_POST['app_url'] ?? '');
+    // Printed on every ใบเบิกวัสดุ (requisition_print.php): a fixed person who
+    // signs as "ผู้จ่าย" (issues the items) and one who signs as "ผู้รับพัสดุ"
+    // under "อนุญาติให้เบิกได้" (approves the withdrawal) - these are usually
+    // the same two people on every slip, so they're set here once instead of
+    // typed by hand on each printout. Optional - left blank, the printed
+    // form just shows an empty signature line like before.
+    $issuerName = sanitizeString($_POST['issuer_name'] ?? '');
+    $issuerPosition = sanitizeString($_POST['issuer_position'] ?? '');
+    $approverName = sanitizeString($_POST['approver_name'] ?? '');
+    $approverPosition = sanitizeString($_POST['approver_position'] ?? '');
 
     if ($appName === '') {
         jsonResponse(['success' => false, 'message' => 'กรุณาระบุชื่อระบบ'], 422);
@@ -46,8 +56,17 @@ function updateSettings(PDO $pdo): void
 
     $stmt = $pdo->prepare('INSERT INTO settings (`key`, `value`) VALUES (:key, :value)
         ON DUPLICATE KEY UPDATE `value` = :value2');
-    $stmt->execute(['key' => 'app_name', 'value' => $appName, 'value2' => $appName]);
-    $stmt->execute(['key' => 'app_url', 'value' => $appUrl, 'value2' => $appUrl]);
+    $values = [
+        'app_name' => $appName,
+        'app_url' => $appUrl,
+        'issuer_name' => $issuerName,
+        'issuer_position' => $issuerPosition,
+        'approver_name' => $approverName,
+        'approver_position' => $approverPosition,
+    ];
+    foreach ($values as $key => $value) {
+        $stmt->execute(['key' => $key, 'value' => $value, 'value2' => $value]);
+    }
 
     jsonResponse(['success' => true, 'message' => 'บันทึกค่าระบบเรียบร้อยแล้ว กรุณารีเฟรชหน้าเว็บเพื่อให้มีผล']);
 }

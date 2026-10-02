@@ -94,6 +94,41 @@ requireAdmin();
                 <button class="btn btn-primary" onclick="saveAppSettings()">บันทึก</button>
             </div>
         </div>
+
+        <div class="card mt-4" style="max-width: 600px;">
+            <div class="card-header">ผู้ลงนามในใบเบิกวัสดุ (พิมพ์)</div>
+            <div class="card-body">
+                <p class="text-muted small">
+                    ชื่อ-ตำแหน่งที่จะพิมพ์ไว้ในช่องลายเซ็น "ผู้จ่าย" และ "ผู้รับพัสดุ" (ใต้หัวข้อ "อนุญาติให้เบิกได้") บนใบเบิกวัสดุทุกใบ
+                    โดยไม่ต้องพิมพ์ชื่อเองทุกครั้ง (ช่อง "ผู้เบิก" จะใช้ชื่อ-ตำแหน่งของผู้ที่ล็อกอินบันทึกใบเบิกนั้นโดยอัตโนมัติ)
+                </p>
+                <form id="signatoriesForm">
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label">ชื่อผู้จ่ายวัสดุ</label>
+                            <input type="text" class="form-control" id="s_issuer_name">
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label">ตำแหน่งผู้จ่ายวัสดุ</label>
+                            <input type="text" class="form-control" id="s_issuer_position">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label">ชื่อผู้อนุมัติ</label>
+                            <input type="text" class="form-control" id="s_approver_name">
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label">ตำแหน่งผู้อนุมัติ</label>
+                            <input type="text" class="form-control" id="s_approver_position">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-end">
+                <button class="btn btn-primary" onclick="saveAppSettings()">บันทึก</button>
+            </div>
+        </div>
     </div>
 </div>
 
