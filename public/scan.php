@@ -19,15 +19,9 @@ $draft = $_SESSION['requisition_draft'] ?? [
     <div class="col-md-5">
         <div class="card">
             <div class="card-body text-center">
-                <div id="reader" style="width: 100%;"></div>
-                <button id="btnToggleScan" class="btn btn-primary mt-3">
-                    <i class="bi bi-camera"></i> เปิดกล้องสแกน
-                </button>
-                <p class="text-muted small mt-2 mb-0">
-                    ถ้าเปิดกล้องในเบราว์เซอร์ไม่ได้ (เช่น ไม่ได้ใช้ HTTPS) ให้ใช้แอปกล้อง/สแกน QR ของเครื่องแทน
-                    สแกนสติ๊กเกอร์แล้วรายการจะถูกเพิ่มลงใบเบิกนี้ให้อัตโนมัติ
+                <p class="text-muted small mb-2">
+                    ใช้แอปกล้อง/สแกน QR ของเครื่องสแกนสติ๊กเกอร์ รายการจะถูกเพิ่มลงใบเบิกนี้ให้อัตโนมัติ
                 </p>
-                <hr>
                 <div class="input-group">
                     <input type="text" id="manualQr" class="form-control" placeholder="หรือกรอกรหัส QR ด้วยตนเอง">
                     <button class="btn btn-outline-secondary" id="btnManualLookup">ค้นหา</button>
@@ -78,50 +72,15 @@ $draft = $_SESSION['requisition_draft'] ?? [
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
 const SCAN_API_URL = '<?= BASE_URL ?>api/scan_api.php';
 const REQ_API_URL = '<?= BASE_URL ?>api/requisition_api.php';
 const PRINT_URL = '<?= BASE_URL ?>public/requisition_print.php';
 const QR_FROM_LINK = <?= json_encode($_GET['qr'] ?? '') ?>;
-let html5QrCode = null;
-let scanning = false;
 
 function showAlert(message, type = 'danger') {
     $('#alertBox').html(`<div class="alert alert-${type} mt-3">${message}</div>`);
 }
-
-function stopScanner() {
-    if (html5QrCode && scanning) {
-        html5QrCode.stop().then(() => {
-            scanning = false;
-            $('#btnToggleScan').html('<i class="bi bi-camera"></i> เปิดกล้องสแกน');
-        }).catch(() => {});
-    }
-}
-
-$('#btnToggleScan').on('click', function () {
-    if (scanning) {
-        stopScanner();
-        return;
-    }
-
-    html5QrCode = html5QrCode || new Html5Qrcode('reader');
-    html5QrCode.start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        (decodedText) => {
-            stopScanner();
-            lookupQr(decodedText);
-        },
-        () => {}
-    ).then(() => {
-        scanning = true;
-        $('#btnToggleScan').html('<i class="bi bi-stop-circle"></i> หยุดสแกน');
-    }).catch((err) => {
-        showAlert('ไม่สามารถเปิดกล้องได้: ' + err + ' — ลองใช้แอปกล้อง/สแกน QR ของเครื่องแทน');
-    });
-});
 
 $('#btnManualLookup').on('click', function () {
     const qr = $('#manualQr').val().trim();
