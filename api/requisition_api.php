@@ -119,9 +119,20 @@ function cartAddAsset(PDO $pdo): void
 {
     $assetId = (int) ($_POST['asset_id'] ?? 0);
     $note = sanitizeString($_POST['note'] ?? '');
+    $pin = sanitizeString($_POST['pin'] ?? '');
 
     if (!$assetId) {
         jsonResponse(['success' => false, 'message' => 'ข้อมูลไม่ถูกต้อง'], 422);
+    }
+
+    if (!preg_match('/^\d{6}$/', $pin)) {
+        jsonResponse(['success' => false, 'message' => 'กรุณากรอก PIN 6 หลักของผู้ยืม'], 422);
+    }
+
+    // Identifies the borrower without requiring them to have a system login.
+    $borrower = findBorrowerByPin($pdo, $pin);
+    if ($borrower === null) {
+        jsonResponse(['success' => false, 'message' => 'ไม่พบผู้ยืมที่ใช้ PIN นี้ กรุณาตรวจสอบ PIN อีกครั้ง'], 422);
     }
 
     $stmt = $pdo->prepare('SELECT * FROM assets WHERE id = :id');
@@ -150,7 +161,8 @@ function cartAddAsset(PDO $pdo): void
         'unit' => null,
         'quantity' => 1,
         'note' => $note,
-        'display' => 'ยืม 1 รายการ',
+        'borrower_name' => $borrower['full_name'],
+        'display' => 'ยืมโดย ' . $borrower['full_name'],
     ];
     $_SESSION['requisition_draft'] = $draft;
 
@@ -278,13 +290,17 @@ function createRequisition(PDO $pdo, array $user): void
 
                 $pdo->prepare("UPDATE assets SET status = 'borrowed' WHERE id = :id")->execute(['id' => $assetId]);
 
+                $assetBorrowerName = sanitizeString($item['borrower_name'] ?? '') ?: $requesterName;
+
                 $insertAssetTx->execute([
                     'asset_id' => $assetId,
                     'user_id' => $user['id'],
                     'requisition_id' => $requisitionId,
-                    'borrower_name' => $requesterName ?: null,
+                    'borrower_name' => $assetBorrowerName ?: null,
                     'note' => $note ?: null,
                 ]);
+
+                $itemNote = 'ผู้ยืม: ' . $assetBorrowerName . ($note !== '' ? " - {$note}" : '');
 
                 $insertItem->execute([
                     'requisition_id' => $requisitionId,
@@ -295,7 +311,7 @@ function createRequisition(PDO $pdo, array $user): void
                     'unit' => null,
                     'qty_requested' => 1,
                     'qty_issued' => 1,
-                    'note' => $note ?: null,
+                    'note' => $itemNote,
                 ]);
             } else {
                 throw new InvalidArgumentException('ประเภทรายการไม่ถูกต้อง');

@@ -13,6 +13,9 @@ requireAdmin();
         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabLocations">สถานที่จัดเก็บ</button>
     </li>
     <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabBorrowers">ผู้ยืม (PIN)</button>
+    </li>
+    <li class="nav-item">
         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabApp">ค่าพื้นฐานระบบ</button>
     </li>
 </ul>
@@ -57,6 +60,27 @@ requireAdmin();
                     </table>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- ผู้ยืม (PIN) -->
+    <div class="tab-pane fade" id="tabBorrowers">
+        <p class="text-muted">
+            รายชื่อผู้ที่สามารถยืมครุภัณฑ์ผ่านหน้าสแกน QR Code โดยกรอก PIN 6 หลักของตัวเองแทนการล็อกอินเข้าระบบ
+            PIN แต่ละคนต้องไม่ซ้ำกัน และถูกเก็บในฐานข้อมูลแบบ hash เช่นเดียวกับรหัสผ่านผู้ใช้งาน (กู้คืน PIN เดิมไม่ได้ ต้องตั้งใหม่หากลืม)
+        </p>
+        <div class="d-flex justify-content-end mb-3">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#borrowerModal" onclick="resetBorrowerForm()">
+                <i class="bi bi-plus-lg"></i> เพิ่มผู้ยืม
+            </button>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-striped align-middle" id="borrowersTable">
+                <thead>
+                <tr><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th></th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
         </div>
     </div>
 
@@ -128,6 +152,40 @@ requireAdmin();
             <div class="modal-footer">
                 <button class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
                 <button class="btn btn-primary" onclick="saveUser()">บันทึก</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit borrower modal -->
+<div class="modal fade" id="borrowerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="borrowerModalTitle">เพิ่มผู้ยืม</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="borrowerForm">
+                    <input type="hidden" id="b_id">
+                    <div class="mb-3">
+                        <label class="form-label">ชื่อ-นามสกุล</label>
+                        <input type="text" class="form-control" id="b_full_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">ตำแหน่ง</label>
+                        <input type="text" class="form-control" id="b_position">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" id="b_pin_label">PIN (6 หลัก)</label>
+                        <input type="password" inputmode="numeric" pattern="\d{6}" maxlength="6" class="form-control" id="b_pin" placeholder="เช่น 123456" autocomplete="off">
+                        <div class="form-text" id="b_pin_hint" style="display:none;">เว้นว่างไว้หากไม่ต้องการเปลี่ยน PIN เดิม</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                <button class="btn btn-primary" onclick="saveBorrower()">บันทึก</button>
             </div>
         </div>
     </div>

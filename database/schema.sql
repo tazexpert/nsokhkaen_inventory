@@ -24,6 +24,23 @@ CREATE TABLE users (
 ) ENGINE=InnoDB;
 
 -- ------------------------------------------------------------
+-- Borrowers (ผู้ยืม) - people who borrow assets, identified by a 6-digit
+-- PIN instead of a full system login. PINs are hashed the same way as
+-- user passwords; uniqueness of the plaintext PIN is enforced by the
+-- app (findBorrowerByPin()/isPinUnique() in includes/functions.php),
+-- not by the database, since the hash itself is salted/unique per row.
+-- ------------------------------------------------------------
+CREATE TABLE borrowers (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    full_name VARCHAR(150) NOT NULL,
+    position VARCHAR(150) NULL,
+    pin_hash VARCHAR(255) NOT NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- ------------------------------------------------------------
 -- Application settings (key/value) - editable from the Settings menu
 -- ------------------------------------------------------------
 CREATE TABLE settings (
@@ -177,6 +194,10 @@ INSERT INTO users (username, password_hash, full_name, role) VALUES
 INSERT INTO settings (`key`, `value`) VALUES
 ('app_name', 'ระบบบริหารจัดการวัสดุและครุภัณฑ์ สำนักงานสถิติจังหวัดขอนแก่น'),
 ('app_url', 'http://localhost/nsokhkaen_inventory/');
+
+-- PIN for this sample borrower is: 123456
+INSERT INTO borrowers (full_name, position, pin_hash) VALUES
+('สมชาย ใจดี', 'นักวิชาการสถิติ', '$2y$12$.j5xtxjAE9aiY43Z0e2S2eQruqs2kI/HnzKRzqcHlNqqLwgtUtLrW');
 
 INSERT INTO storage_locations (name) VALUES
 ('ห้องพัสดุ ชั้น 1'),

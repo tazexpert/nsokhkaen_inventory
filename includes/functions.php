@@ -137,6 +137,36 @@ function handleImageUpload(string $fieldName, string $subfolder, string $code): 
     return 'uploads/' . $subfolder . '/' . $filename;
 }
 
+// Borrower PINs (ผู้ยืม) identify someone borrowing an asset without
+// requiring them to have a full system login. Stored hashed exactly like
+// user passwords; since each hash is independently salted, uniqueness of
+// the plaintext PIN has to be checked by trying every active borrower's
+// hash rather than by a database constraint.
+
+// Finds the active borrower whose PIN matches, or null if none does.
+// Used both to verify a PIN typed on the scan page and to enforce
+// PIN uniqueness when creating/editing a borrower.
+function findBorrowerByPin(PDO $pdo, string $pin, ?int $excludeId = null): ?array
+{
+    $sql = 'SELECT * FROM borrowers WHERE is_active = 1';
+    $params = [];
+    if ($excludeId !== null) {
+        $sql .= ' AND id != :exclude_id';
+        $params['exclude_id'] = $excludeId;
+    }
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+
+    foreach ($stmt->fetchAll() as $borrower) {
+        if (password_verify($pin, $borrower['pin_hash'])) {
+            return $borrower;
+        }
+    }
+
+    return null;
+}
+
 // The actual content encoded into the printed QR image: a direct link to the
 // scan page. Any phone camera app can open this - it does not need our own
 // in-page scanner. If the user is not logged in, scan.php requires login

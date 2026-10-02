@@ -202,6 +202,11 @@ function renderAsset(a) {
     if (a.status === 'available') {
         actionHtml = `
             <div class="mb-3">
+                <label class="form-label">PIN ผู้ยืม (6 หลัก)</label>
+                <input type="password" inputmode="numeric" pattern="\\d{6}" maxlength="6" class="form-control" id="borrowPin" placeholder="เช่น 123456" autocomplete="off">
+                <div class="form-text">ให้ผู้ยืมกรอก PIN ของตัวเองแทนการล็อกอิน (ตั้ง PIN ได้ที่เมนู "ตั้งค่าระบบ")</div>
+            </div>
+            <div class="mb-3">
                 <label class="form-label">หมายเหตุ</label>
                 <input type="text" class="form-control" id="borrowNote">
             </div>
@@ -234,11 +239,18 @@ function renderAsset(a) {
 
 function addAssetToCart(assetId) {
     const note = $('#borrowNote').val();
+    const pin = $('#borrowPin').val().trim();
+
+    if (!/^\d{6}$/.test(pin)) {
+        showAlert('กรุณากรอก PIN 6 หลักของผู้ยืม');
+        return;
+    }
 
     $.post(REQ_API_URL, {
         action: 'cart_add_asset',
         asset_id: assetId,
         note,
+        pin,
         purpose: $('#req_purpose').val(),
         requester_name: $('#req_requester_name').val(),
         requester_position: $('#req_requester_position').val(),
