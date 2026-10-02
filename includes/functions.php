@@ -57,26 +57,40 @@ function thaiCategoryLetter(string $name): ?string
     return null;
 }
 
-// Finds (or creates) the single-letter material category matching the
-// item's name, returning its category_id - or null if the name has no
-// Thai consonant to derive a letter from (e.g. an all-English name).
-function autoMaterialCategoryId(PDO $pdo, string $name): ?int
+// Finds (or creates) a category by its exact name, scoped to $itemType
+// ('material' or 'asset'), returning its id.
+function findOrCreateCategory(PDO $pdo, string $name, string $itemType): int
 {
-    $letter = thaiCategoryLetter($name);
-    if ($letter === null) {
-        return null;
-    }
-
-    $stmt = $pdo->prepare("SELECT id FROM categories WHERE name = :name AND item_type = 'material'");
-    $stmt->execute(['name' => $letter]);
+    $stmt = $pdo->prepare('SELECT id FROM categories WHERE name = :name AND item_type = :item_type');
+    $stmt->execute(['name' => $name, 'item_type' => $itemType]);
     $id = $stmt->fetchColumn();
     if ($id !== false) {
         return (int) $id;
     }
 
-    $insert = $pdo->prepare("INSERT INTO categories (name, item_type) VALUES (:name, 'material')");
-    $insert->execute(['name' => $letter]);
+    $insert = $pdo->prepare('INSERT INTO categories (name, item_type) VALUES (:name, :item_type)');
+    $insert->execute(['name' => $name, 'item_type' => $itemType]);
     return (int) $pdo->lastInsertId();
+}
+
+// Resolves the category_id to save for a material: $manualCategory (admin
+// typed it in directly) wins when given; otherwise falls back to the
+// auto-derived single-Thai-letter category from the item name. Returns
+// null only when there's no manual value AND the name has no Thai
+// consonant to derive one from (e.g. an all-English name).
+function resolveMaterialCategoryId(PDO $pdo, string $name, string $manualCategory): ?int
+{
+    $manualCategory = trim($manualCategory);
+    if ($manualCategory !== '') {
+        return findOrCreateCategory($pdo, $manualCategory, 'material');
+    }
+
+    $letter = thaiCategoryLetter($name);
+    if ($letter === null) {
+        return null;
+    }
+
+    return findOrCreateCategory($pdo, $letter, 'material');
 }
 
 // Saves an uploaded photo (field $fieldName in $_FILES) under

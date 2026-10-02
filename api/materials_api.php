@@ -59,7 +59,7 @@ function listMaterials(PDO $pdo): void
 function getMaterial(PDO $pdo): void
 {
     $id = (int) ($_GET['id'] ?? 0);
-    $stmt = $pdo->prepare('SELECT * FROM materials WHERE id = :id');
+    $stmt = $pdo->prepare('SELECT m.*, c.name AS category_name FROM materials m LEFT JOIN categories c ON c.id = m.category_id WHERE m.id = :id');
     $stmt->execute(['id' => $id]);
     $row = $stmt->fetch();
     if (!$row) {
@@ -77,6 +77,7 @@ function createMaterial(PDO $pdo, array $user): void
     $minStock = (int) ($_POST['min_stock'] ?? 0);
     $location = sanitizeString($_POST['storage_location'] ?? '');
     $note = sanitizeString($_POST['note'] ?? '');
+    $category = sanitizeString($_POST['category'] ?? '');
 
     if ($name === '') {
         jsonResponse(['success' => false, 'message' => 'กรุณาระบุชื่อวัสดุ'], 422);
@@ -88,9 +89,9 @@ function createMaterial(PDO $pdo, array $user): void
 
     $code = generateNextCode($pdo, 'materials', 'material_code', 'MAT');
     $qr = generateQrPayload($code);
-    // Category is never picked manually - it is always the first Thai
-    // consonant of the item name (e.g. "แฟ้ม..." -> "ฟ").
-    $categoryId = autoMaterialCategoryId($pdo, $name);
+    // Category defaults to the first Thai consonant of the item name
+    // (e.g. "แฟ้ม..." -> "ฟ") unless the admin typed one in themselves.
+    $categoryId = resolveMaterialCategoryId($pdo, $name, $category);
 
     try {
         $imagePath = handleImageUpload('image', 'materials', $code);
@@ -128,6 +129,7 @@ function updateMaterial(PDO $pdo): void
     $minStock = (int) ($_POST['min_stock'] ?? 0);
     $location = sanitizeString($_POST['storage_location'] ?? '');
     $note = sanitizeString($_POST['note'] ?? '');
+    $category = sanitizeString($_POST['category'] ?? '');
 
     if (!$id || $name === '') {
         jsonResponse(['success' => false, 'message' => 'ข้อมูลไม่ถูกต้อง'], 422);
@@ -150,7 +152,7 @@ function updateMaterial(PDO $pdo): void
         jsonResponse(['success' => false, 'message' => $e->getMessage()], 422);
     }
 
-    $categoryId = autoMaterialCategoryId($pdo, $name);
+    $categoryId = resolveMaterialCategoryId($pdo, $name, $category);
 
     $stmt = $pdo->prepare("UPDATE materials SET name = :name, category_id = :category_id, unit = :unit,
         unit_cost = :unit_cost, min_stock = :min_stock, storage_location = :location, image_path = :image_path,

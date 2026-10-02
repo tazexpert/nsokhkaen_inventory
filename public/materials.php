@@ -3,6 +3,7 @@ require_once __DIR__ . '/../includes/header.php';
 requireAdmin();
 $pdo = getDbConnection();
 $storageLocations = $pdo->query('SELECT * FROM storage_locations ORDER BY name')->fetchAll();
+$materialCategories = $pdo->query("SELECT * FROM categories WHERE item_type = 'material' ORDER BY name")->fetchAll();
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -55,8 +56,13 @@ $storageLocations = $pdo->query('SELECT * FROM storage_locations ORDER BY name')
                     </div>
                     <div class="mb-3">
                         <label class="form-label">หมวดหมู่</label>
-                        <input type="text" class="form-control" id="m_category_preview" disabled>
-                        <div class="form-text">กำหนดอัตโนมัติจากตัวอักษรไทยตัวแรกของชื่อวัสดุ</div>
+                        <input type="text" class="form-control" id="m_category" list="m_category_list" placeholder="เว้นว่างเพื่อใช้ตัวอักษรไทยตัวแรกของชื่ออัตโนมัติ">
+                        <datalist id="m_category_list">
+                            <?php foreach ($materialCategories as $c): ?>
+                                <option value="<?= htmlspecialchars($c['name']) ?>">
+                            <?php endforeach; ?>
+                        </datalist>
+                        <div class="form-text">พิมพ์หมวดหมู่เองได้ตามต้องการ หรือเว้นว่างไว้เพื่อให้ระบบกำหนดจากตัวอักษรไทยตัวแรกของชื่อวัสดุให้อัตโนมัติ</div>
                     </div>
                     <div class="row">
                         <div class="col-6 mb-3">

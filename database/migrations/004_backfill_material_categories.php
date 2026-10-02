@@ -2,7 +2,7 @@
 /**
  * One-off backfill: re-assigns category_id for every EXISTING material to
  * the auto-derived single-Thai-letter category (see
- * includes/functions.php:autoMaterialCategoryId()), for databases that had
+ * includes/functions.php:resolveMaterialCategoryId()), for databases that had
  * materials before migration 004 introduced this behavior.
  *
  * Run from the project root: php database/migrations/004_backfill_material_categories.php
@@ -17,7 +17,7 @@ $updated = 0;
 $skipped = 0;
 
 foreach ($materials as $material) {
-    $categoryId = autoMaterialCategoryId($pdo, $material['name']);
+    $categoryId = resolveMaterialCategoryId($pdo, $material['name'], '');
     if ($categoryId === null) {
         $skipped++;
         echo "skip (no Thai letter): #{$material['id']} {$material['name']}" . PHP_EOL;

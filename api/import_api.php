@@ -93,7 +93,7 @@ try {
         foreach ($records as $record) {
             $code = generateNextCode($pdo, 'materials', 'material_code', 'MAT');
             $qr = generateQrPayload($code);
-            $categoryId = autoMaterialCategoryId($pdo, $record['name']);
+            $categoryId = resolveMaterialCategoryId($pdo, $record['name'], '');
 
             $stmt = $pdo->prepare("INSERT INTO materials
                 (material_code, qr_code, name, category_id, unit, unit_cost, stock_qty, min_stock, storage_location, note, created_by)
