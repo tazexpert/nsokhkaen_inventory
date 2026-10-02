@@ -32,7 +32,7 @@ $itemsStmt = $pdo->prepare('SELECT * FROM requisition_items WHERE requisition_id
 $itemsStmt->execute(['id' => $id]);
 $items = $itemsStmt->fetchAll();
 
-$minRows = 12;
+$minRows = 15;
 $blankRows = max(0, $minRows - count($items));
 
 // Keeps the paper-form look of a blank line to sign/write on when a value
@@ -84,7 +84,7 @@ function formatThaiDate(string $datetime): string
         .subtitle { text-align: center; margin: 0 0 8px; }
         .intro { margin: 8px 0; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-        th, td { border: 1px solid #000; padding: 4px 6px; }
+        th, td { border: 1px solid #000; padding: 3px 6px; }
         th { background: #f0f0f0; }
         .col-no { width: 6%; text-align: center; }
         .col-unit { width: 10%; text-align: center; }
@@ -94,7 +94,7 @@ function formatThaiDate(string $datetime): string
            of leaving a big gap below them when the table doesn't fill the
            page on its own. */
         .signatures { margin-top: auto; }
-        .sign-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px; }
+        .sign-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 10px; }
         .sign-block { text-align: center; }
         .approve-title { text-align: center; font-weight: bold; font-size: 18pt; margin-top: 8px; }
         @media print {
