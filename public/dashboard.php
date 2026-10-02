@@ -68,12 +68,12 @@ function dashboardCard(string $colorClass, int $value, string $label, ?string $h
                     <tbody>
                     <?php foreach ($recentRequisitions as $req): ?>
                         <tr>
-                            <td><?= htmlspecialchars($req['requisition_no']) ?></td>
+                            <td><a href="<?= BASE_URL ?>public/requisition_view.php?id=<?= (int) $req['id'] ?>"><?= htmlspecialchars($req['requisition_no']) ?></a></td>
                             <td><?= htmlspecialchars($req['requester_name'] ?: '-') ?></td>
                             <td><?= (int) $req['item_count'] ?></td>
                             <td><?= htmlspecialchars($req['created_at']) ?></td>
                             <td>
-                                <a href="<?= BASE_URL ?>public/requisition_print.php?id=<?= (int) $req['id'] ?>" target="_blank" class="btn btn-sm btn-outline-secondary">ดู/พิมพ์</a>
+                                <a href="<?= BASE_URL ?>public/requisition_print.php?id=<?= (int) $req['id'] ?>" target="_blank" class="btn btn-sm btn-outline-secondary">พิมพ์</a>
                             </td>
                         </tr>
                     <?php endforeach; ?>

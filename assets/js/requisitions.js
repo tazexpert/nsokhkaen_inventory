@@ -1,5 +1,6 @@
 const REQ_API = BASE_URL_JS + 'api/requisition_api.php';
 const REQ_PRINT_URL = BASE_URL_JS + 'public/requisition_print.php';
+const REQ_VIEW_URL = BASE_URL_JS + 'public/requisition_view.php';
 
 function loadRequisitions() {
     const params = {
@@ -14,7 +15,7 @@ function loadRequisitions() {
         res.data.forEach((r) => {
             tbody.append(`
                 <tr>
-                    <td>${r.requisition_no}</td>
+                    <td><a href="${REQ_VIEW_URL}?id=${r.id}">${r.requisition_no}</a></td>
                     <td>${r.created_at}</td>
                     <td>${r.requester_name || '-'}</td>
                     <td>${r.purpose || '-'}</td>
@@ -22,7 +23,7 @@ function loadRequisitions() {
                     <td>${r.created_by_name}</td>
                     <td class="text-end">
                         <a href="${REQ_PRINT_URL}?id=${r.id}" target="_blank" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-printer"></i> ดู/พิมพ์
+                            <i class="bi bi-printer"></i> พิมพ์
                         </a>
                     </td>
                 </tr>
