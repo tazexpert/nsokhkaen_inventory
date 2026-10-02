@@ -35,19 +35,15 @@ $fullyLoggedIn = isLoggedIn();
         </button>
         <div class="collapse navbar-collapse" id="navMenu">
             <ul class="navbar-nav me-auto">
-                <?php if ($fullyLoggedIn): ?>
                 <li class="nav-item">
                     <a class="nav-link <?= $currentPage === 'dashboard.php' ? 'active' : '' ?>" href="<?= BASE_URL ?>public/dashboard.php">แดชบอร์ด</a>
                 </li>
-                <?php endif; ?>
                 <li class="nav-item">
                     <a class="nav-link <?= $currentPage === 'scan.php' ? 'active' : '' ?>" href="<?= BASE_URL ?>public/scan.php">สแกน QR Code</a>
                 </li>
-                <?php if ($fullyLoggedIn): ?>
                 <li class="nav-item">
                     <a class="nav-link <?= $currentPage === 'requisitions.php' ? 'active' : '' ?>" href="<?= BASE_URL ?>public/requisitions.php">ใบเบิก</a>
                 </li>
-                <?php endif; ?>
                 <?php if (isAdmin()): ?>
                 <li class="nav-item">
                     <a class="nav-link <?= $currentPage === 'materials.php' ? 'active' : '' ?>" href="<?= BASE_URL ?>public/materials.php">วัสดุสิ้นเปลือง</a>
@@ -60,11 +56,9 @@ $fullyLoggedIn = isLoggedIn();
                 </li>
                 <?php endif; ?>
             </ul>
-            <?php if ($fullyLoggedIn): ?>
             <a href="<?= BASE_URL ?>public/account.php" class="btn btn-outline-light btn-sm me-2 <?= $currentPage === 'account.php' ? 'active' : '' ?>" title="บัญชีของฉัน">
                 <i class="bi bi-person-gear"></i>
             </a>
-            <?php endif; ?>
             <?php if (isAdmin()): ?>
             <a href="<?= BASE_URL ?>public/settings.php" class="btn btn-outline-light btn-sm me-3 <?= $currentPage === 'settings.php' ? 'active' : '' ?>" title="ตั้งค่าระบบ">
                 <i class="bi bi-gear"></i>
