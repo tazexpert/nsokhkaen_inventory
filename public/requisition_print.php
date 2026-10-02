@@ -83,18 +83,19 @@ function formatThaiDate(string $datetime): string
         h2 { text-align: center; margin: 0 0 2px; font-size: 18pt; }
         .subtitle { text-align: center; margin: 0 0 8px; }
         .intro { margin: 8px 0; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
         th, td { border: 1px solid #000; padding: 3px 6px; }
         th { background: #f0f0f0; }
         .col-no { width: 6%; text-align: center; }
         .col-unit { width: 10%; text-align: center; }
         .col-qty { width: 12%; text-align: center; }
         .col-note { width: 16%; }
-        /* Pushes the three signature boxes to the bottom of the page instead
-           of leaving a big gap below them when the table doesn't fill the
-           page on its own. */
-        .signatures { margin-top: auto; }
-        .sign-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 10px; }
+        .sign-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 6px; }
+        /* Pushes the approval box to the bottom of the page instead of
+           leaving a big gap below it when the table doesn't fill the page
+           on its own - .signatures.sign-grid beats the plain .sign-grid
+           margin-top above on specificity. */
+        .signatures.sign-grid { margin-top: auto; }
         .sign-block { text-align: center; }
         .approve-title { text-align: center; font-weight: bold; font-size: 18pt; margin-top: 8px; }
         @media print {
@@ -143,31 +144,29 @@ function formatThaiDate(string $datetime): string
     </tbody>
 </table>
 
-<div class="signatures">
-    <div class="sign-grid">
-        <div class="sign-block">
-            <div>ลงชื่อ <?= signatureLine($requisition['creator_name']) ?> ผู้เบิก</div>
-            <div>ตำแหน่ง <?= blankIfEmpty($requisition['creator_position']) ?></div>
-            <div>วันที่ <?= formatThaiDate($requisition['created_at']) ?></div>
-        </div>
-        <div class="sign-block">
-            <div>ลงชื่อ <?= signatureLine($signatorySettings['issuer_name'] ?? null) ?> ผู้จ่ายวัสดุ</div>
-            <div>ตำแหน่ง <?= blankIfEmpty($signatorySettings['issuer_position'] ?? null) ?></div>
-            <div>วันที่ <?= formatThaiDate($requisition['created_at']) ?></div>
-        </div>
+<div class="sign-grid">
+    <div class="sign-block">
+        <div>ลงชื่อ <?= signatureLine($requisition['creator_name']) ?> ผู้เบิก</div>
+        <div>ตำแหน่ง <?= blankIfEmpty($requisition['creator_position']) ?></div>
+        <div>วันที่ <?= formatThaiDate($requisition['created_at']) ?></div>
     </div>
+    <div class="sign-block">
+        <div>ลงชื่อ <?= signatureLine($signatorySettings['issuer_name'] ?? null) ?> ผู้จ่ายวัสดุ</div>
+        <div>ตำแหน่ง <?= blankIfEmpty($signatorySettings['issuer_position'] ?? null) ?></div>
+        <div>วันที่ <?= formatThaiDate($requisition['created_at']) ?></div>
+    </div>
+</div>
 
-    <div class="sign-grid">
-        <div>
-            <div class="approve-title">อนุญาติให้เบิกได้</div>
-            <div class="sign-block">
-                <div>ลงชื่อ <?= signatureLine($signatorySettings['approver_name'] ?? null) ?></div>
-                <div>ตำแหน่ง <?= blankIfEmpty($signatorySettings['approver_position'] ?? null) ?></div>
-                <div>วันที่ <?= formatThaiDate($requisition['created_at']) ?></div>
-            </div>
+<div class="signatures sign-grid">
+    <div>
+        <div class="approve-title">อนุญาติให้เบิกได้</div>
+        <div class="sign-block">
+            <div>ลงชื่อ <?= signatureLine($signatorySettings['approver_name'] ?? null) ?></div>
+            <div>ตำแหน่ง <?= blankIfEmpty($signatorySettings['approver_position'] ?? null) ?></div>
+            <div>วันที่ <?= formatThaiDate($requisition['created_at']) ?></div>
         </div>
-        <div></div>
     </div>
+    <div></div>
 </div>
 
 </div>
