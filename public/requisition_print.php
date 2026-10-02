@@ -32,7 +32,7 @@ $itemsStmt = $pdo->prepare('SELECT * FROM requisition_items WHERE requisition_id
 $itemsStmt->execute(['id' => $id]);
 $items = $itemsStmt->fetchAll();
 
-$minRows = 9;
+$minRows = 12;
 $blankRows = max(0, $minRows - count($items));
 
 // Keeps the paper-form look of a blank line to sign/write on when a value
@@ -66,7 +66,7 @@ function formatThaiDate(string $datetime): string
     <meta charset="UTF-8">
     <title>ใบเบิกวัสดุ เลขที่ <?= htmlspecialchars($requisition['requisition_no']) ?></title>
     <style>
-        body { font-family: 'TH Sarabun New', 'Tahoma', sans-serif; font-size: 16pt; margin: 20px; color: #000; }
+        body { font-family: 'TH Sarabun New', 'Tahoma', sans-serif; font-size: 16pt; line-height: 1.15; margin: 20px; color: #000; }
         .toolbar { margin-bottom: 15px; }
         .text-right { text-align: right; }
         .text-center { text-align: center; }
@@ -74,7 +74,7 @@ function formatThaiDate(string $datetime): string
         .subtitle { text-align: center; margin: 0 0 8px; }
         .intro { margin: 8px 0; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-        th, td { border: 1px solid #000; padding: 3px 6px; }
+        th, td { border: 1px solid #000; padding: 2px 6px; line-height: 1.1; }
         th { background: #f0f0f0; }
         .col-no { width: 6%; text-align: center; }
         .col-unit { width: 10%; text-align: center; }
@@ -82,7 +82,7 @@ function formatThaiDate(string $datetime): string
         .col-note { width: 16%; }
         .sign-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
         .sign-block { text-align: center; }
-        .approve-title { text-align: center; font-weight: bold; margin-top: 12px; }
+        .approve-title { text-align: center; font-weight: bold; font-size: 18pt; margin-top: 12px; }
         @media print {
             .toolbar { display: none; }
         }
