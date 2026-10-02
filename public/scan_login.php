@@ -3,11 +3,12 @@ require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../includes/functions.php';
 
 // Identifies whoever is about to use the scan page with just their 6-digit
-// PIN - no username/password needed. Once set, $_SESSION['scan_pin_user']
-// (or a full $_SESSION['user'] login) is remembered for the rest of the
-// visit, so repeated scans (including ones opened fresh by the phone's own
-// camera/QR app) never ask for the PIN again.
-if (isset($_SESSION['user']) || isset($_SESSION['scan_pin_user'])) {
+// PIN - no username/password needed. A correct PIN logs them in exactly
+// like index.php does (sets $_SESSION['user']), so they get full access
+// everywhere their role allows for the rest of the visit, not just the
+// scan page - including page loads triggered by scanning another sticker
+// with the phone's own camera/QR app.
+if (isset($_SESSION['user'])) {
     $redirect = empty($_SESSION['redirect_after_login']) ? 'scan.php' : $_SESSION['redirect_after_login'];
     unset($_SESSION['redirect_after_login']);
     header('Location: ' . $redirect);
@@ -26,12 +27,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $row = findUserByPin($pdo, $pin);
 
         if ($row) {
-            $_SESSION['scan_pin_user'] = [
+            $_SESSION['user'] = [
                 'id' => $row['id'],
                 'username' => $row['username'],
                 'full_name' => $row['full_name'],
-                'position' => $row['position'],
                 'role' => $row['role'],
+                'has_pin' => true,
+                // Only used to pick the "(ยืนยันด้วย PIN)" badge and the
+                // "เปลี่ยนผู้ใช้" logout label - never for access control.
+                'via_pin' => true,
             ];
             $redirect = empty($_SESSION['redirect_after_login']) ? 'scan.php' : $_SESSION['redirect_after_login'];
             unset($_SESSION['redirect_after_login']);

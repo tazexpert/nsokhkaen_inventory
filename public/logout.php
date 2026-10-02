@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../config/config.php';
-$wasPinOnly = isset($_SESSION['scan_pin_user']) && !isset($_SESSION['user']);
+$wasPinOnly = ($_SESSION['user']['via_pin'] ?? false) === true;
 session_destroy();
 header('Location: ' . ($wasPinOnly ? 'scan_login.php' : 'index.php'));
 exit;

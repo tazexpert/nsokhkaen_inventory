@@ -20,34 +20,34 @@ require_once __DIR__ . '/../includes/functions.php';
 $pdo = getDbConnection();
 $action = $_REQUEST['action'] ?? '';
 
-// Actions driven straight from the scan page (public/scan.php) only need
-// scan-level access (full login OR a verified PIN - see
-// includes/auth.php:requireScanAccessApi()). Browsing/listing past slips
-// (e.g. from requisitions.php) still requires a full staff/admin login.
+// Every action here needs a login - either the usual username+password one,
+// or a 6-digit PIN entered on the scan page (public/scan_login.php), which
+// logs the user in exactly the same way (see includes/auth.php). So a PIN
+// is as good as a full login for all of these, cart/create included.
 switch ($action) {
     case 'cart_get':
-        requireScanAccessApi();
+        requireLoginApi();
         jsonResponse(['success' => true, 'data' => getDraft()]);
         break;
     case 'cart_add_material':
-        requireScanAccessApi();
+        requireLoginApi();
         cartAddMaterial($pdo);
         break;
     case 'cart_add_asset':
-        $user = requireScanAccessApi();
+        $user = requireLoginApi();
         cartAddAsset($pdo, $user);
         break;
     case 'cart_remove':
-        requireScanAccessApi();
+        requireLoginApi();
         cartRemove();
         break;
     case 'cart_clear':
-        requireScanAccessApi();
+        requireLoginApi();
         clearDraft();
         jsonResponse(['success' => true, 'data' => getDraft()]);
         break;
     case 'create':
-        $user = requireScanAccessApi();
+        $user = requireLoginApi();
         createRequisition($pdo, $user);
         break;
     case 'list':
@@ -126,9 +126,8 @@ function cartAddMaterial(PDO $pdo): void
     jsonResponse(['success' => true, 'data' => $draft]);
 }
 
-// $user is whoever already identified themselves to the scan page - either
-// a full login or a PIN verified once in this session (see
-// includes/auth.php:requireScanAccessApi()) - and becomes the borrower on
+// $user is whoever is logged in (via a full login or a PIN - see
+// includes/auth.php/public/scan_login.php) and becomes the borrower on
 // record for every asset added to the cart, with no PIN needed per item.
 function cartAddAsset(PDO $pdo, array $user): void
 {

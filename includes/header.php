@@ -3,16 +3,18 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/functions.php';
 $currentPage = basename($_SERVER['PHP_SELF']);
 
-// The scan page accepts either a full login OR just a PIN (see
-// public/scan_login.php) - every other page still needs a full login.
+// The scan page sends a not-yet-logged-in visitor to the PIN pad instead of
+// the username+password form - either way logs them in the same way (see
+// includes/auth.php / public/scan_login.php), so they get full access
+// everywhere their role allows afterwards, not just the scan page.
 if ($currentPage === 'scan.php') {
     requireScanAccess();
-    $user = currentScanUser();
 } else {
     requireLogin();
-    $user = currentUser();
 }
-$fullyLoggedIn = isLoggedIn();
+$user = currentUser();
+// Only affects display (badge text, logout button label) - never access.
+$loggedInViaPin = $user['via_pin'] ?? false;
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -66,9 +68,9 @@ $fullyLoggedIn = isLoggedIn();
             <?php endif; ?>
             <span class="navbar-text text-white me-3">
                 <i class="bi bi-person-circle"></i> <?= htmlspecialchars($user['full_name']) ?>
-                <?= $fullyLoggedIn ? '(' . ($user['role'] === 'admin' ? 'ผู้ดูแลระบบ' : 'เจ้าหน้าที่') . ')' : '(ยืนยันด้วย PIN)' ?>
+                <?= $loggedInViaPin ? '(ยืนยันด้วย PIN)' : '(' . ($user['role'] === 'admin' ? 'ผู้ดูแลระบบ' : 'เจ้าหน้าที่') . ')' ?>
             </span>
-            <a href="<?= BASE_URL ?>public/logout.php" class="btn btn-outline-light btn-sm"><?= $fullyLoggedIn ? 'ออกจากระบบ' : 'เปลี่ยนผู้ใช้' ?></a>
+            <a href="<?= BASE_URL ?>public/logout.php" class="btn btn-outline-light btn-sm"><?= $loggedInViaPin ? 'เปลี่ยนผู้ใช้' : 'ออกจากระบบ' ?></a>
         </div>
     </div>
 </nav>

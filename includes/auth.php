@@ -49,36 +49,22 @@ function requireLoginApi(): array
 }
 
 // The scan page (public/scan.php) doesn't require a full username+password
-// login - a staff member who IS logged in can use it as normal, but anyone
-// else only needs to identify themselves with their 6-digit PIN once (see
-// public/scan_login.php), after which that identity is remembered in the
-// session for the rest of the visit, including page loads triggered by
-// scanning another sticker with the phone's own camera app.
-function currentScanUser(): ?array
-{
-    return $_SESSION['user'] ?? $_SESSION['scan_pin_user'] ?? null;
-}
-
+// login - identifying with a 6-digit PIN (see public/scan_login.php) logs
+// the user in exactly the same way (sets $_SESSION['user']), so once
+// verified they have full access everywhere their role allows (dashboard,
+// ใบเบิก, etc.), not just the scan page - the only difference is which
+// login screen a not-yet-logged-in visitor is sent to, and the PIN session
+// is remembered for the rest of the visit including page loads triggered
+// by scanning another sticker with the phone's own camera app.
 function requireScanAccess(): void
 {
-    if (currentScanUser() === null) {
+    if (!isLoggedIn()) {
         if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_SERVER['REQUEST_URI'])) {
             $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
         }
         header('Location: ' . BASE_URL . 'public/scan_login.php');
         exit;
     }
-}
-
-function requireScanAccessApi(): array
-{
-    $user = currentScanUser();
-    if ($user === null) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'message' => 'กรุณากรอก PIN ก่อนใช้งาน']);
-        exit;
-    }
-    return $user;
 }
 
 function requireAdminApi(): array
