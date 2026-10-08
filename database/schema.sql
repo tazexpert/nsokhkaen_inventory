@@ -83,13 +83,6 @@ CREATE TABLE materials (
     unit VARCHAR(50) NOT NULL DEFAULT 'ชิ้น',
     unit_cost DECIMAL(12,2) NOT NULL DEFAULT 0.00,
     stock_qty INT NOT NULL DEFAULT 0,
-    -- ยอดตามบัญชี ณ วันที่ตรวจนับครั้งล่าสุดที่นำเข้า (ไว้เทียบกับ stock_qty ซึ่ง
-    -- เป็นยอดตรวจนับจริง) และวันที่ตรวจนับนั้น - เติมจากไฟล์รายงานตรวจนับพัสดุ
-    -- เท่านั้น ไม่มีในการเพิ่ม/แก้ไขวัสดุตามปกติ
-    book_qty INT NULL,
-    count_date DATE NULL,
-    -- ลำดับในทะเบียนรายงานวัสดุฉบับกระดาษเดิมของสำนักงาน (ถ้ามี)
-    ledger_no INT NULL,
     min_stock INT NOT NULL DEFAULT 0,
     storage_location VARCHAR(255) NULL,
     image_path VARCHAR(255) NULL,

@@ -64,7 +64,6 @@ $materialCategories = $pdo->query("SELECT * FROM categories WHERE item_type = 'm
                         </datalist>
                         <div class="form-text">รหัสตามรายงานสำรวจ/ตรวจนับพัสดุของสำนักงาน เป็นทั้งหมวดหมู่และส่วนต้นของรหัสวัสดุ (เลือกรหัสที่มีอยู่ หรือพิมพ์รหัสใหม่)</div>
                     </div>
-                    <div id="m_stocktake_info" class="alert alert-light border small py-2 px-3" style="display:none;"></div>
                     <div class="row">
                         <div class="col-6 mb-3">
                             <label class="form-label">หน่วยนับ</label>
@@ -163,7 +162,7 @@ $materialCategories = $pdo->query("SELECT * FROM categories WHERE item_type = 'm
                 <ul class="text-muted small">
                     <li>แบบฟอร์มของระบบ: คอลัมน์ name, category_code, unit, unit_cost, stock_qty, min_stock, storage_location, note</li>
                     <li>แบบฟอร์ม "รายละเอียดพัสดุ" ของสำนักงาน (ลำดับที่ / รายละเอียดของพัสดุ / ราคาที่ได้มาจากการสืบราคา(หน่วยละ) / จำนวน(หน่วย)) - ใช้ไฟล์เดิมได้เลยโดยไม่ต้องปรับคอลัมน์ (ไม่มีรหัสหมวดวัสดุ)</li>
-                    <li>แบบฟอร์ม "รายงานวัสดุคงเหลือ" (รายงานสำรวจ/ตรวจนับพัสดุประจำปี) ของสำนักงาน (ลำดับที่ / รหัสหมวดวัสดุ / รายการ / หน่วยนับ / ยอดตามบัญชี / ยอดตรวจนับ / ราคาต่อหน่วย / ยอดรวม / หมายเหตุ) - ใช้ยอดตรวจนับเป็นจำนวนคงเหลือ และใช้รหัสหมวดวัสดุกำหนดหมวดหมู่และรหัสวัสดุ</li>
+                    <li>แบบฟอร์ม "รายงานวัสดุคงเหลือ" ของสำนักงาน (ลำดับที่ / รหัสหมวดวัสดุ / รายการ / หน่วยนับ / ยอดตามบัญชี) - ใช้ยอดตามบัญชีเป็นจำนวนคงเหลือ และใช้รหัสหมวดวัสดุกำหนดหมวดหมู่และรหัสวัสดุ</li>
                 </ul>
                 <a href="<?= BASE_URL ?>api/import_template.php?type=material" class="btn btn-sm btn-outline-primary mb-3">
                     <i class="bi bi-download"></i> ดาวน์โหลดแบบฟอร์มเปล่า (Excel)
