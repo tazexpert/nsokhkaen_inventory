@@ -77,6 +77,8 @@ function resetMaterialForm() {
     $('#materialForm')[0].reset();
     $('#m_id').val('');
     $('#m_category').val('').data('autofilled', false);
+    $('#m_category_code').val('');
+    $('#m_stocktake_info').hide().text('');
     $('#m_image_preview').attr('src', '').hide();
     $('#m_stock_qty_label').text('จำนวนคงเหลือเริ่มต้น');
     $('#materialModalTitle').text('เพิ่มวัสดุ');
@@ -95,6 +97,17 @@ function editMaterial(id) {
         ensureSelectOption('#m_storage_location', m.storage_location);
         $('#m_note').val(m.note);
         $('#m_category').val(m.category_name || '').data('autofilled', false);
+        $('#m_category_code').val(m.category_code || '');
+        // book_qty/count_date/ledger_no only exist on items imported from the
+        // office's stocktake report - shown read-only for reference, not editable.
+        if (m.book_qty !== null && m.book_qty !== undefined) {
+            const parts = [`ยอดตามบัญชีตอนนำเข้า: ${m.book_qty} ${m.unit}`];
+            if (m.count_date) parts.push(`วันที่ตรวจนับ: ${m.count_date}`);
+            if (m.ledger_no) parts.push(`เลขที่ในทะเบียนเดิม: ${m.ledger_no}`);
+            $('#m_stocktake_info').text(parts.join(' | ')).show();
+        } else {
+            $('#m_stocktake_info').hide().text('');
+        }
         if (m.image_path) {
             $('#m_image_preview').attr('src', imageUrl(m.image_path)).show();
         } else {
@@ -118,6 +131,7 @@ function saveMaterial() {
     formData.append('storage_location', $('#m_storage_location').val());
     formData.append('note', $('#m_note').val());
     formData.append('category', $('#m_category').val());
+    formData.append('category_code', $('#m_category_code').val());
     const imageFile = $('#m_image')[0].files[0];
     if (imageFile) {
         formData.append('image', imageFile);

@@ -82,6 +82,9 @@ function createMaterial(PDO $pdo, array $user): void
     $location = sanitizeString($_POST['storage_location'] ?? '');
     $note = sanitizeString($_POST['note'] ?? '');
     $category = sanitizeString($_POST['category'] ?? '');
+    // รหัสหมวดวัสดุตามรายงานสำรวจ/ตรวจนับของสำนักงาน (ถ้ามี) - คนละอย่างกับ
+    // $category ด้านบนซึ่งเป็นหมวดหมู่ตัวอักษรไทยของระบบ
+    $categoryCode = sanitizeString($_POST['category_code'] ?? '');
 
     if ($name === '') {
         jsonResponse(['success' => false, 'message' => 'กรุณาระบุชื่อวัสดุ'], 422);
@@ -104,13 +107,14 @@ function createMaterial(PDO $pdo, array $user): void
     }
 
     $stmt = $pdo->prepare("INSERT INTO materials
-        (material_code, qr_code, name, category_id, unit, unit_cost, stock_qty, min_stock, storage_location, image_path, note, created_by)
-        VALUES (:code, :qr, :name, :category_id, :unit, :unit_cost, :stock_qty, :min_stock, :location, :image_path, :note, :created_by)");
+        (material_code, qr_code, name, category_id, category_code, unit, unit_cost, stock_qty, min_stock, storage_location, image_path, note, created_by)
+        VALUES (:code, :qr, :name, :category_id, :category_code, :unit, :unit_cost, :stock_qty, :min_stock, :location, :image_path, :note, :created_by)");
     $stmt->execute([
         'code' => $code,
         'qr' => $qr,
         'name' => $name,
         'category_id' => $categoryId,
+        'category_code' => $categoryCode ?: null,
         'unit' => $unit,
         'unit_cost' => $unitCost,
         'stock_qty' => $stockQty,
@@ -135,6 +139,7 @@ function updateMaterial(PDO $pdo): void
     $location = sanitizeString($_POST['storage_location'] ?? '');
     $note = sanitizeString($_POST['note'] ?? '');
     $category = sanitizeString($_POST['category'] ?? '');
+    $categoryCode = sanitizeString($_POST['category_code'] ?? '');
 
     if (!$id || $name === '') {
         jsonResponse(['success' => false, 'message' => 'ข้อมูลไม่ถูกต้อง'], 422);
@@ -163,12 +168,13 @@ function updateMaterial(PDO $pdo): void
 
     $categoryId = resolveMaterialCategoryId($pdo, $name, $category);
 
-    $stmt = $pdo->prepare("UPDATE materials SET name = :name, category_id = :category_id, unit = :unit,
-        unit_cost = :unit_cost, stock_qty = :stock_qty, min_stock = :min_stock, storage_location = :location,
+    $stmt = $pdo->prepare("UPDATE materials SET name = :name, category_id = :category_id, category_code = :category_code,
+        unit = :unit, unit_cost = :unit_cost, stock_qty = :stock_qty, min_stock = :min_stock, storage_location = :location,
         image_path = :image_path, note = :note WHERE id = :id");
     $stmt->execute([
         'name' => $name,
         'category_id' => $categoryId,
+        'category_code' => $categoryCode ?: null,
         'unit' => $unit,
         'unit_cost' => $unitCost,
         'stock_qty' => $stockQty,

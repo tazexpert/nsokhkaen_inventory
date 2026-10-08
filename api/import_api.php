@@ -28,10 +28,15 @@ if (count($rows) < 2) {
 }
 
 /**
- * Two supported layouts for materials:
+ * Three supported layouts for materials:
  *  1. Our own simple template (import_template.php): one header row with
  *     English column keys (name, unit, unit_cost, stock_qty, ...).
- *  2. The office's own "ใบสืบราคา/รายละเอียดพัสดุ" form: a multi-row merged
+ *  2. The office's own annual stocktake report "รายงานวัสดุคงเหลือ" (ลำดับที่ /
+ *     รหัสหมวดวัสดุ / รายการ / หน่วยนับ / ยอดตามบัญชี / ยอดตรวจนับ / ราคาต่อหน่วย /
+ *     ยอดรวม / หมายเหตุ / ลำดับในทะเบียนรายงานวัสดุ) - detected by the
+ *     distinctive "รหัสหมวดวัสดุ" header cell, since the real header spans
+ *     several merged/sub-header rows above the data.
+ *  3. The office's older "ใบสืบราคา/รายละเอียดพัสดุ" form: a multi-row merged
  *     header (ลำดับที่ / รายละเอียดของพัสดุ / ราคาที่ได้มาจากการสืบราคา(หน่วยละ) /
  *     จำนวน(หน่วย) / จำนวนเงิน), with each item row starting with its running
  *     number in column A. Detected by that running-number column instead of
@@ -60,6 +65,10 @@ function extractMaterialRecords(array $rows): array
         return $records;
     }
 
+    if (sheetHasHeaderCell($rows, 'รหัสหมวดวัสดุ')) {
+        return extractStocktakeRecords($rows);
+    }
+
     // Office form: column A = running number, B = item name, D = unit price,
     // E = quantity being purchased/received into stock.
     $records = [];
@@ -82,6 +91,84 @@ function extractMaterialRecords(array $rows): array
     return $records;
 }
 
+// Looks for $needle as a trimmed cell value anywhere in the first few rows
+// (the real header of these office forms spans several merged/sub-header
+// rows, so checking only rows[0] isn't enough).
+function sheetHasHeaderCell(array $rows, string $needle): bool
+{
+    foreach (array_slice($rows, 0, 8) as $row) {
+        foreach ($row as $cell) {
+            if (trim((string) $cell) === $needle) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+// รายงานวัสดุคงเหลือ (annual stocktake report): column A = running number,
+// B = รหัสหมวดวัสดุ, C = รายการ, D = หน่วยนับ, E = ยอดตามบัญชี, F = ยอดตรวจนับ,
+// G = ราคาต่อหน่วย, H = ยอดรวม (ignored, derivable), I = หมายเหตุ,
+// J = ลำดับในทะเบียนรายงานวัสดุ (optional). stock_qty is set to the physically
+// counted amount (ยอดตรวจนับ) since that's the authoritative current figure;
+// book_qty is kept only for reference/reconciliation against it.
+function extractStocktakeRecords(array $rows): array
+{
+    $countDate = extractCountDate($rows);
+    $records = [];
+    foreach ($rows as $row) {
+        $no = $row[0] ?? null;
+        $name = trim((string) ($row[2] ?? ''));
+        if ($name === '' || !is_numeric($no) || (int) $no <= 0) {
+            continue;
+        }
+        $categoryCode = trim((string) ($row[1] ?? ''));
+        $records[] = [
+            'name' => $name,
+            'category_code' => $categoryCode !== '' ? $categoryCode : null,
+            'unit' => trim((string) ($row[3] ?? '')) ?: 'ชิ้น',
+            'book_qty' => is_numeric($row[4] ?? null) ? (int) $row[4] : null,
+            'stock_qty' => is_numeric($row[5] ?? null) ? (int) $row[5] : 0,
+            'count_date' => $countDate,
+            'unit_cost' => (float) ($row[6] ?? 0),
+            'min_stock' => 0,
+            'storage_location' => null,
+            'note' => trim((string) ($row[8] ?? '')) ?: null,
+            'ledger_no' => is_numeric($row[9] ?? null) ? (int) $row[9] : null,
+        ];
+    }
+    return $records;
+}
+
+// Finds the "ยอดตรวจนับ ... วันที่ D เดือน พ.ศ." date embedded in the report's
+// header cell (e.g. "ยอดตรวจนับ\nวันที่ 1 ตุลาคม 2569") and converts it to a
+// Y-m-d (Gregorian) date, or null if the header doesn't contain one.
+function extractCountDate(array $rows): ?string
+{
+    $months = [
+        'มกราคม' => 1, 'กุมภาพันธ์' => 2, 'มีนาคม' => 3, 'เมษายน' => 4,
+        'พฤษภาคม' => 5, 'มิถุนายน' => 6, 'กรกฎาคม' => 7, 'สิงหาคม' => 8,
+        'กันยายน' => 9, 'ตุลาคม' => 10, 'พฤศจิกายน' => 11, 'ธันวาคม' => 12,
+    ];
+    $monthPattern = implode('|', array_keys($months));
+
+    foreach (array_slice($rows, 0, 8) as $row) {
+        foreach ($row as $cell) {
+            $text = (string) $cell;
+            if (strpos($text, 'ยอดตรวจนับ') === false) {
+                continue;
+            }
+            if (preg_match('/วันที่\s*(\d{1,2})\s*(' . $monthPattern . ')\s*(\d{4})/u', $text, $m)) {
+                $day = (int) $m[1];
+                $month = $months[$m[2]];
+                $year = (int) $m[3] - 543; // Buddhist era -> Gregorian
+                return sprintf('%04d-%02d-%02d', $year, $month, $day);
+            }
+        }
+    }
+    return null;
+}
+
 $imported = 0;
 $skipped = 0;
 
@@ -95,12 +182,19 @@ try {
             $qr = generateQrPayload($code);
             $categoryId = resolveMaterialCategoryId($pdo, $record['name'], '');
 
+            // category_code/book_qty/count_date/ledger_no only come from the
+            // stocktake-report format; the other two formats leave them null.
             $stmt = $pdo->prepare("INSERT INTO materials
-                (material_code, qr_code, name, category_id, unit, unit_cost, stock_qty, min_stock, storage_location, note, created_by)
-                VALUES (:code, :qr, :name, :category_id, :unit, :unit_cost, :stock_qty, :min_stock, :location, :note, :created_by)");
+                (material_code, qr_code, name, category_id, category_code, unit, unit_cost,
+                 stock_qty, book_qty, count_date, ledger_no, min_stock, storage_location, note, created_by)
+                VALUES (:code, :qr, :name, :category_id, :category_code, :unit, :unit_cost,
+                 :stock_qty, :book_qty, :count_date, :ledger_no, :min_stock, :location, :note, :created_by)");
             $stmt->execute([
                 'code' => $code, 'qr' => $qr, 'name' => $record['name'], 'category_id' => $categoryId,
+                'category_code' => $record['category_code'] ?? null,
                 'unit' => $record['unit'], 'unit_cost' => $record['unit_cost'], 'stock_qty' => $record['stock_qty'],
+                'book_qty' => $record['book_qty'] ?? null, 'count_date' => $record['count_date'] ?? null,
+                'ledger_no' => $record['ledger_no'] ?? null,
                 'min_stock' => $record['min_stock'], 'location' => $record['storage_location'], 'note' => $record['note'],
                 'created_by' => $_SESSION['user']['id'],
             ]);
