@@ -17,11 +17,35 @@ function imageUrl(path) {
     return path ? BASE_URL_JS + path : '';
 }
 
+// Column sort state for the materials table - defaults to รหัส (material_code)
+// ascending, toggles direction when the same header is clicked again.
+let materialSort = { key: 'material_code', dir: 'asc' };
+
+function sortMaterials(data) {
+    const { key, dir } = materialSort;
+    const sign = dir === 'asc' ? 1 : -1;
+    return [...data].sort((a, b) => {
+        const av = a[key] ?? '';
+        const bv = b[key] ?? '';
+        if (typeof av === 'number' && typeof bv === 'number') {
+            return (av - bv) * sign;
+        }
+        return String(av).localeCompare(String(bv), 'th') * sign;
+    });
+}
+
+function updateSortIndicators() {
+    $('#materialsTable th.sortable i.bi').attr('class', 'bi');
+    const $active = $(`#materialsTable th.sortable[data-sort="${materialSort.key}"] i`);
+    $active.addClass(materialSort.dir === 'asc' ? 'bi-caret-up-fill' : 'bi-caret-down-fill');
+}
+
 function loadMaterials(keyword = '') {
     const lowStock = $('#lowStockOnly').is(':checked') ? '1' : '';
     $.get(API, { action: 'list', keyword, low_stock: lowStock }, function (res) {
         const tbody = $('#materialsTable tbody').empty();
-        res.data.forEach((m) => {
+        updateSortIndicators();
+        sortMaterials(res.data).forEach((m) => {
             const lowStock = m.stock_qty <= m.min_stock;
             const thumb = m.image_path
                 ? `<img src="${imageUrl(m.image_path)}" alt="" style="width:40px;height:40px;object-fit:cover;" class="rounded">`
@@ -168,6 +192,16 @@ $('#searchInput').on('input', function () {
 });
 
 $('#lowStockOnly').on('change', function () {
+    loadMaterials($('#searchInput').val());
+});
+
+$('#materialsTable thead').on('click', 'th.sortable', function () {
+    const key = $(this).data('sort');
+    if (materialSort.key === key) {
+        materialSort.dir = materialSort.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+        materialSort = { key, dir: 'asc' };
+    }
     loadMaterials($('#searchInput').val());
 });
 

@@ -32,7 +32,13 @@ $materialCategories = $pdo->query("SELECT * FROM categories WHERE item_type = 'm
 <table class="table table-striped align-middle" id="materialsTable">
     <thead>
     <tr>
-        <th style="width:56px;">รูป</th><th>รหัส</th><th>ชื่อวัสดุ</th><th>หมวดหมู่</th><th>คงเหลือ</th><th>หน่วย</th><th>ต้นทุน/หน่วย</th><th>ที่จัดเก็บ</th><th></th>
+        <th style="width:56px;">รูป</th>
+        <th class="sortable" data-sort="material_code" style="cursor:pointer;">รหัส <i class="bi"></i></th>
+        <th class="sortable" data-sort="name" style="cursor:pointer;">ชื่อวัสดุ <i class="bi"></i></th>
+        <th class="sortable" data-sort="category_name" style="cursor:pointer;">หมวดหมู่ <i class="bi"></i></th>
+        <th class="sortable" data-sort="stock_qty" style="cursor:pointer;">คงเหลือ <i class="bi"></i></th>
+        <th class="sortable" data-sort="unit" style="cursor:pointer;">หน่วย <i class="bi"></i></th>
+        <th>ต้นทุน/หน่วย</th><th>ที่จัดเก็บ</th><th></th>
     </tr>
     </thead>
     <tbody></tbody>
