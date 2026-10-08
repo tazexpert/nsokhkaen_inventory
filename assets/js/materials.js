@@ -13,32 +13,6 @@ function ensureSelectOption(selectEl, value) {
     $select.val(value);
 }
 
-// Mirrors includes/functions.php:thaiCategoryLetter() - first Thai consonant
-// (ก-ฮ) in the name, skipping leading vowels/digits/Latin letters/spaces.
-// Used only for the live preview in the form; the server always recomputes
-// the real value on save.
-function thaiCategoryLetterPreview(name) {
-    for (const char of Array.from(name || '')) {
-        const code = char.codePointAt(0);
-        if (code >= 0x0E01 && code <= 0x0E2E) {
-            return char;
-        }
-    }
-    return null;
-}
-
-// Suggests the auto-derived letter in the (editable) category field, but
-// only while the admin hasn't typed something into it themselves - once
-// they do, their input is never overwritten.
-function suggestCategory() {
-    const $category = $('#m_category');
-    if ($category.val().trim() !== '' && !$category.data('autofilled')) {
-        return;
-    }
-    const letter = thaiCategoryLetterPreview($('#m_name').val());
-    $category.val(letter || '').data('autofilled', true);
-}
-
 function imageUrl(path) {
     return path ? BASE_URL_JS + path : '';
 }
@@ -76,7 +50,6 @@ function loadMaterials(keyword = '') {
 function resetMaterialForm() {
     $('#materialForm')[0].reset();
     $('#m_id').val('');
-    $('#m_category').val('').data('autofilled', false);
     $('#m_category_code').val('');
     $('#m_stocktake_info').hide().text('');
     $('#m_image_preview').attr('src', '').hide();
@@ -96,7 +69,6 @@ function editMaterial(id) {
         $('#m_min_stock').val(m.min_stock);
         ensureSelectOption('#m_storage_location', m.storage_location);
         $('#m_note').val(m.note);
-        $('#m_category').val(m.category_name || '').data('autofilled', false);
         $('#m_category_code').val(m.category_code || '');
         // book_qty/count_date/ledger_no only exist on items imported from the
         // office's stocktake report - shown read-only for reference, not editable.
@@ -130,7 +102,6 @@ function saveMaterial() {
     formData.append('min_stock', $('#m_min_stock').val());
     formData.append('storage_location', $('#m_storage_location').val());
     formData.append('note', $('#m_note').val());
-    formData.append('category', $('#m_category').val());
     formData.append('category_code', $('#m_category_code').val());
     const imageFile = $('#m_image')[0].files[0];
     if (imageFile) {
@@ -209,11 +180,6 @@ $('#searchInput').on('input', function () {
 
 $('#lowStockOnly').on('change', function () {
     loadMaterials($('#searchInput').val());
-});
-
-$('#m_name').on('input', suggestCategory);
-$('#m_category').on('input', function () {
-    $(this).data('autofilled', false);
 });
 
 $(document).ready(() => {

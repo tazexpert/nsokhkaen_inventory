@@ -55,19 +55,14 @@ $materialCategories = $pdo->query("SELECT * FROM categories WHERE item_type = 'm
                         <input type="text" class="form-control" id="m_name" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">หมวดหมู่</label>
-                        <input type="text" class="form-control" id="m_category" list="m_category_list" placeholder="เว้นว่างเพื่อใช้ตัวอักษรไทยตัวแรกของชื่ออัตโนมัติ">
-                        <datalist id="m_category_list">
+                        <label class="form-label">รหัสหมวดวัสดุ</label>
+                        <input type="text" class="form-control" id="m_category_code" list="m_category_code_list" placeholder="เช่น 14111500" required>
+                        <datalist id="m_category_code_list">
                             <?php foreach ($materialCategories as $c): ?>
                                 <option value="<?= htmlspecialchars($c['name']) ?>">
                             <?php endforeach; ?>
                         </datalist>
-                        <div class="form-text">พิมพ์หมวดหมู่เองได้ตามต้องการ หรือเว้นว่างไว้เพื่อให้ระบบกำหนดจากตัวอักษรไทยตัวแรกของชื่อวัสดุให้อัตโนมัติ</div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">รหัสหมวดวัสดุ (ถ้ามี)</label>
-                        <input type="text" class="form-control" id="m_category_code" placeholder="เช่น 14111500">
-                        <div class="form-text">รหัสตามรายงานสำรวจ/ตรวจนับพัสดุของสำนักงาน (ไม่เกี่ยวกับหมวดหมู่ด้านบน) เว้นว่างได้หากไม่มี</div>
+                        <div class="form-text">รหัสตามรายงานสำรวจ/ตรวจนับพัสดุของสำนักงาน เป็นทั้งหมวดหมู่และส่วนต้นของรหัสวัสดุ (เลือกรหัสที่มีอยู่ หรือพิมพ์รหัสใหม่)</div>
                     </div>
                     <div id="m_stocktake_info" class="alert alert-light border small py-2 px-3" style="display:none;"></div>
                     <div class="row">
@@ -164,11 +159,11 @@ $materialCategories = $pdo->query("SELECT * FROM categories WHERE item_type = 'm
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p class="text-muted mb-1">รองรับ 3 รูปแบบไฟล์ - ระบบตรวจจับอัตโนมัติ (หมวดหมู่กำหนดให้อัตโนมัติจากชื่อวัสดุเสมอ ไม่ต้องระบุมาในไฟล์):</p>
+                <p class="text-muted mb-1">รองรับ 3 รูปแบบไฟล์ - ระบบตรวจจับอัตโนมัติ (หมวดหมู่และรหัสวัสดุกำหนดจากรหัสหมวดวัสดุ (category_code) ในไฟล์ - รายการที่ไม่มีรหัสหมวดวัสดุจะไม่มีหมวดหมู่และใช้รหัสวัสดุแบบเดิม MAT-0001):</p>
                 <ul class="text-muted small">
-                    <li>แบบฟอร์มของระบบ: คอลัมน์ name, unit, unit_cost, stock_qty, min_stock, storage_location, note</li>
-                    <li>แบบฟอร์ม "รายละเอียดพัสดุ" ของสำนักงาน (ลำดับที่ / รายละเอียดของพัสดุ / ราคาที่ได้มาจากการสืบราคา(หน่วยละ) / จำนวน(หน่วย)) - ใช้ไฟล์เดิมได้เลยโดยไม่ต้องปรับคอลัมน์</li>
-                    <li>แบบฟอร์ม "รายงานวัสดุคงเหลือ" (รายงานสำรวจ/ตรวจนับพัสดุประจำปี) ของสำนักงาน (ลำดับที่ / รหัสหมวดวัสดุ / รายการ / หน่วยนับ / ยอดตามบัญชี / ยอดตรวจนับ / ราคาต่อหน่วย / ยอดรวม / หมายเหตุ) - ใช้ยอดตรวจนับเป็นจำนวนคงเหลือ และเก็บยอดตามบัญชี/รหัสหมวดวัสดุไว้อ้างอิง</li>
+                    <li>แบบฟอร์มของระบบ: คอลัมน์ name, category_code, unit, unit_cost, stock_qty, min_stock, storage_location, note</li>
+                    <li>แบบฟอร์ม "รายละเอียดพัสดุ" ของสำนักงาน (ลำดับที่ / รายละเอียดของพัสดุ / ราคาที่ได้มาจากการสืบราคา(หน่วยละ) / จำนวน(หน่วย)) - ใช้ไฟล์เดิมได้เลยโดยไม่ต้องปรับคอลัมน์ (ไม่มีรหัสหมวดวัสดุ)</li>
+                    <li>แบบฟอร์ม "รายงานวัสดุคงเหลือ" (รายงานสำรวจ/ตรวจนับพัสดุประจำปี) ของสำนักงาน (ลำดับที่ / รหัสหมวดวัสดุ / รายการ / หน่วยนับ / ยอดตามบัญชี / ยอดตรวจนับ / ราคาต่อหน่วย / ยอดรวม / หมายเหตุ) - ใช้ยอดตรวจนับเป็นจำนวนคงเหลือ และใช้รหัสหมวดวัสดุกำหนดหมวดหมู่และรหัสวัสดุ</li>
                 </ul>
                 <a href="<?= BASE_URL ?>api/import_template.php?type=material" class="btn btn-sm btn-outline-primary mb-3">
                     <i class="bi bi-download"></i> ดาวน์โหลดแบบฟอร์มเปล่า (Excel)

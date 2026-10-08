@@ -43,20 +43,6 @@ function generateRequisitionNo(PDO $pdo): string
     return $nextNumber . $suffix;
 }
 
-// First Thai consonant (ก-ฮ) in the name, skipping leading vowels (เ แ โ ใ ไ),
-// digits, Latin letters, spaces, etc. e.g. "แฟ้มสันกว้าง" -> "ฟ",
-// "โพสต์อิท..." -> "พ". Returns null if the name has no Thai consonant at all.
-function thaiCategoryLetter(string $name): ?string
-{
-    foreach (mb_str_split($name, 1, 'UTF-8') as $char) {
-        $code = mb_ord($char, 'UTF-8');
-        if ($code !== false && $code >= 0x0E01 && $code <= 0x0E2E) {
-            return $char;
-        }
-    }
-    return null;
-}
-
 // Finds (or creates) a category by its exact name, scoped to $itemType
 // ('material' or 'asset'), returning its id.
 function findOrCreateCategory(PDO $pdo, string $name, string $itemType): int
@@ -73,24 +59,52 @@ function findOrCreateCategory(PDO $pdo, string $name, string $itemType): int
     return (int) $pdo->lastInsertId();
 }
 
-// Resolves the category_id to save for a material: $manualCategory (admin
-// typed it in directly) wins when given; otherwise falls back to the
-// auto-derived single-Thai-letter category from the item name. Returns
-// null only when there's no manual value AND the name has no Thai
-// consonant to derive one from (e.g. an all-English name).
-function resolveMaterialCategoryId(PDO $pdo, string $name, string $manualCategory): ?int
+// Resolves the category_id to save for a material from its รหัสหมวดวัสดุ
+// (category_code, e.g. "14111500" - the office's own material classification
+// code). Returns null only when no category_code was given (e.g. a legacy
+// item added before this scheme, or imported from a format that doesn't
+// carry one).
+function resolveMaterialCategoryId(PDO $pdo, ?string $categoryCode): ?int
 {
-    $manualCategory = trim($manualCategory);
-    if ($manualCategory !== '') {
-        return findOrCreateCategory($pdo, $manualCategory, 'material');
-    }
-
-    $letter = thaiCategoryLetter($name);
-    if ($letter === null) {
+    $categoryCode = trim((string) $categoryCode);
+    if ($categoryCode === '') {
         return null;
     }
 
-    return findOrCreateCategory($pdo, $letter, 'material');
+    return findOrCreateCategory($pdo, $categoryCode, 'material');
+}
+
+// Generates the next material_code for $categoryCode: the category code
+// itself followed by a 2-digit running number scoped to that category
+// (e.g. "14111500" -> "1411150001", "1411150002", ...), per the office's
+// own numbering convention. Falls back to the generic MAT-0001 scheme for
+// materials with no category_code (manual entries predating this scheme,
+// or imported from a format that doesn't carry one).
+function generateNextMaterialCode(PDO $pdo, ?string $categoryCode): string
+{
+    $categoryCode = trim((string) $categoryCode);
+    if ($categoryCode === '') {
+        return generateNextCode($pdo, 'materials', 'material_code', 'MAT');
+    }
+
+    $stmt = $pdo->prepare('SELECT material_code FROM materials
+        WHERE material_code LIKE :prefix AND CHAR_LENGTH(material_code) = :len
+        ORDER BY material_code DESC LIMIT 1');
+    $stmt->execute([
+        'prefix' => $categoryCode . '%',
+        'len' => strlen($categoryCode) + 2,
+    ]);
+    $last = $stmt->fetchColumn();
+
+    $nextNumber = 1;
+    if ($last !== false) {
+        $seq = substr($last, strlen($categoryCode));
+        if ($seq !== false && ctype_digit($seq)) {
+            $nextNumber = (int) $seq + 1;
+        }
+    }
+
+    return $categoryCode . str_pad((string) $nextNumber, 2, '0', STR_PAD_LEFT);
 }
 
 // Saves an uploaded photo (field $fieldName in $_FILES) under

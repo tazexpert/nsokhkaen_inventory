@@ -81,24 +81,25 @@ function createMaterial(PDO $pdo, array $user): void
     $minStock = (int) ($_POST['min_stock'] ?? 0);
     $location = sanitizeString($_POST['storage_location'] ?? '');
     $note = sanitizeString($_POST['note'] ?? '');
-    $category = sanitizeString($_POST['category'] ?? '');
-    // รหัสหมวดวัสดุตามรายงานสำรวจ/ตรวจนับของสำนักงาน (ถ้ามี) - คนละอย่างกับ
-    // $category ด้านบนซึ่งเป็นหมวดหมู่ตัวอักษรไทยของระบบ
+    // รหัสหมวดวัสดุ (category_code, เช่น 14111500) - คีย์หมวดหมู่หลักของวัสดุ และ
+    // เป็นส่วนต้นของ material_code (ตามด้วยลำดับที่ 2 หลักในหมวดนั้น)
     $categoryCode = sanitizeString($_POST['category_code'] ?? '');
 
     if ($name === '') {
         jsonResponse(['success' => false, 'message' => 'กรุณาระบุชื่อวัสดุ'], 422);
     }
 
+    if ($categoryCode === '') {
+        jsonResponse(['success' => false, 'message' => 'กรุณาระบุรหัสหมวดวัสดุ'], 422);
+    }
+
     if ($unitCost < 0) {
         jsonResponse(['success' => false, 'message' => 'ต้นทุน/หน่วยต้องไม่ติดลบ'], 422);
     }
 
-    $code = generateNextCode($pdo, 'materials', 'material_code', 'MAT');
+    $code = generateNextMaterialCode($pdo, $categoryCode);
     $qr = generateQrPayload($code);
-    // Category defaults to the first Thai consonant of the item name
-    // (e.g. "แฟ้ม..." -> "ฟ") unless the admin typed one in themselves.
-    $categoryId = resolveMaterialCategoryId($pdo, $name, $category);
+    $categoryId = resolveMaterialCategoryId($pdo, $categoryCode);
 
     try {
         $imagePath = handleImageUpload('image', 'materials', $code);
@@ -138,11 +139,14 @@ function updateMaterial(PDO $pdo): void
     $minStock = (int) ($_POST['min_stock'] ?? 0);
     $location = sanitizeString($_POST['storage_location'] ?? '');
     $note = sanitizeString($_POST['note'] ?? '');
-    $category = sanitizeString($_POST['category'] ?? '');
     $categoryCode = sanitizeString($_POST['category_code'] ?? '');
 
     if (!$id || $name === '') {
         jsonResponse(['success' => false, 'message' => 'ข้อมูลไม่ถูกต้อง'], 422);
+    }
+
+    if ($categoryCode === '') {
+        jsonResponse(['success' => false, 'message' => 'กรุณาระบุรหัสหมวดวัสดุ'], 422);
     }
 
     if ($unitCost < 0) {
@@ -166,7 +170,7 @@ function updateMaterial(PDO $pdo): void
         jsonResponse(['success' => false, 'message' => $e->getMessage()], 422);
     }
 
-    $categoryId = resolveMaterialCategoryId($pdo, $name, $category);
+    $categoryId = resolveMaterialCategoryId($pdo, $categoryCode);
 
     $stmt = $pdo->prepare("UPDATE materials SET name = :name, category_id = :category_id, category_code = :category_code,
         unit = :unit, unit_cost = :unit_cost, stock_qty = :stock_qty, min_stock = :min_stock, storage_location = :location,

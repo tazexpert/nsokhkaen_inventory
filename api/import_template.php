@@ -14,11 +14,11 @@ if (!in_array($type, ['material', 'asset'], true)) {
 }
 
 if ($type === 'material') {
-    // No category_id column - the category is always auto-assigned from the
-    // first Thai consonant of the item name (see thaiCategoryLetter()).
+    // category_code (รหัสหมวดวัสดุ ตามระบบของสำนักงาน เช่น 14111500) กำหนด
+    // ทั้งหมวดหมู่และรหัสวัสดุ (material_code = category_code + ลำดับ 2 หลัก)
     $rows = [
-        ['name', 'unit', 'unit_cost', 'stock_qty', 'min_stock', 'storage_location', 'note'],
-        ['ตัวอย่าง: ปากกาลูกลื่น', 'ด้าม', '5.00', '100', '10', 'ห้องพัสดุ ชั้น 1', ''],
+        ['name', 'category_code', 'unit', 'unit_cost', 'stock_qty', 'min_stock', 'storage_location', 'note'],
+        ['ตัวอย่าง: ปากกาลูกลื่น', '44121706', 'ด้าม', '5.00', '100', '10', 'ห้องพัสดุ ชั้น 1', ''],
     ];
     $filename = 'material_import_template.xlsx';
 } else {

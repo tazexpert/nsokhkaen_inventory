@@ -72,10 +72,13 @@ CREATE TABLE materials (
     material_code VARCHAR(50) NOT NULL UNIQUE,
     qr_code VARCHAR(100) NOT NULL UNIQUE,
     name VARCHAR(255) NOT NULL,
+    -- category_id คือ id ของแถวใน categories ที่ name = category_code ด้านล่าง
+    -- (ใช้ findOrCreateCategory() หาหรือสร้างให้) เก็บไว้เพื่อ join ชื่อหมวดหมู่
+    -- แสดงผลเท่านั้น ตัวค่าหมวดหมู่จริงอยู่ที่ category_code
     category_id INT UNSIGNED NULL,
     -- รหัสหมวดวัสดุ แบบตัวเลข (เช่น 14111500) ตามรายงานสำรวจ/ตรวจนับพัสดุของ
-    -- สำนักงาน - เป็นคนละระบบกับ category_id (หมวดหมู่ตัวอักษรไทยที่ระบบกำหนด
-    -- ให้อัตโนมัติ) เก็บไว้เพื่ออ้างอิงกลับไปยังรายงานต้นฉบับเท่านั้น
+    -- สำนักงาน - เป็นคีย์หมวดหมู่หลักของวัสดุ และเป็นส่วนต้นของ material_code
+    -- (ตามด้วยลำดับที่ 2 หลักในหมวดนั้น เช่น 1411150001, 1411150002, ...)
     category_code VARCHAR(20) NULL,
     unit VARCHAR(50) NOT NULL DEFAULT 'ชิ้น',
     unit_cost DECIMAL(12,2) NOT NULL DEFAULT 0.00,
@@ -213,21 +216,21 @@ INSERT INTO storage_locations (name) VALUES
 ('ห้องธุรการ ชั้น 1'),
 ('ห้องประชุม ชั้น 3');
 
--- Material categories are auto-assigned by the app from the first Thai
--- consonant of the item name (e.g. "แฟ้ม..." -> "ฟ") - see
--- includes/functions.php:thaiCategoryLetter(). Asset categories are still
--- picked manually by the admin.
+-- Material categories are keyed by category_code (รหัสหมวดวัสดุ ตามรายงาน
+-- สำรวจ/ตรวจนับพัสดุของสำนักงาน เช่น 44121706) - categories.name stores the
+-- code itself, created via includes/functions.php:findOrCreateCategory().
+-- Asset categories are still picked manually by the admin.
 INSERT INTO categories (name, item_type) VALUES
-('ป', 'material'),
-('ก', 'material'),
-('ฟ', 'material'),
+('44121706', 'material'),
+('14111507', 'material'),
+('44122105', 'material'),
 ('คอมพิวเตอร์และอุปกรณ์ต่อพ่วง', 'asset'),
 ('ครุภัณฑ์สำนักงาน', 'asset');
 
-INSERT INTO materials (material_code, qr_code, name, category_id, unit, unit_cost, stock_qty, min_stock, storage_location) VALUES
-('MAT-0001', 'MAT-QR-0001', 'ปากกาลูกลื่นสีน้ำเงิน', 1, 'ด้าม', 5.00, 150, 20, 'ห้องพัสดุ ชั้น 1'),
-('MAT-0002', 'MAT-QR-0002', 'กระดาษ A4 80 แกรม', 2, 'รีม', 115.00, 60, 10, 'ห้องพัสดุ ชั้น 1'),
-('MAT-0003', 'MAT-QR-0003', 'แฟ้มสันกว้าง', 3, 'เล่ม', 45.00, 40, 5, 'ห้องพัสดุ ชั้น 1');
+INSERT INTO materials (material_code, qr_code, name, category_id, category_code, unit, unit_cost, stock_qty, min_stock, storage_location) VALUES
+('4412170601', 'MAT-QR-0001', 'ปากกาลูกลื่นสีน้ำเงิน', 1, '44121706', 'ด้าม', 5.00, 150, 20, 'ห้องพัสดุ ชั้น 1'),
+('1411150701', 'MAT-QR-0002', 'กระดาษ A4 80 แกรม', 2, '14111507', 'รีม', 115.00, 60, 10, 'ห้องพัสดุ ชั้น 1'),
+('4412210501', 'MAT-QR-0003', 'แฟ้มสันกว้าง', 3, '44122105', 'เล่ม', 45.00, 40, 5, 'ห้องพัสดุ ชั้น 1');
 
 INSERT INTO assets (asset_code, qr_code, name, category_id, brand_model, serial_number, status, storage_location, acquired_date) VALUES
 ('AST-0001', 'AST-QR-0001', 'คอมพิวเตอร์ตั้งโต๊ะ', 4, 'Dell OptiPlex 3090', 'SN-DL-0001', 'available', 'ห้องปฏิบัติการ ชั้น 2', '2023-05-10'),

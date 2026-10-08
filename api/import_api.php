@@ -28,9 +28,12 @@ if (count($rows) < 2) {
 }
 
 /**
- * Three supported layouts for materials:
+ * Three supported layouts for materials (all keyed to category_code, the
+ * office's own รหัสหมวดวัสดุ - material_code and category are derived from
+ * it; records with no category_code fall back to the generic MAT-0001
+ * scheme and no category):
  *  1. Our own simple template (import_template.php): one header row with
- *     English column keys (name, unit, unit_cost, stock_qty, ...).
+ *     English column keys (name, category_code, unit, unit_cost, stock_qty, ...).
  *  2. The office's own annual stocktake report "รายงานวัสดุคงเหลือ" (ลำดับที่ /
  *     รหัสหมวดวัสดุ / รายการ / หน่วยนับ / ยอดตามบัญชี / ยอดตรวจนับ / ราคาต่อหน่วย /
  *     ยอดรวม / หมายเหตุ / ลำดับในทะเบียนรายงานวัสดุ) - detected by the
@@ -54,6 +57,7 @@ function extractMaterialRecords(array $rows): array
             }
             $records[] = [
                 'name' => trim((string) $record['name']),
+                'category_code' => trim((string) ($record['category_code'] ?? '')) ?: null,
                 'unit' => trim((string) ($record['unit'] ?? 'ชิ้น')) ?: 'ชิ้น',
                 'unit_cost' => (float) ($record['unit_cost'] ?? 0),
                 'stock_qty' => (int) ($record['stock_qty'] ?? 0),
@@ -80,6 +84,7 @@ function extractMaterialRecords(array $rows): array
         }
         $records[] = [
             'name' => $name,
+            'category_code' => null,
             'unit' => 'ชิ้น',
             'unit_cost' => (float) ($row[3] ?? 0),
             'stock_qty' => (int) ($row[4] ?? 0),
@@ -178,9 +183,9 @@ try {
         $records = extractMaterialRecords($rows);
 
         foreach ($records as $record) {
-            $code = generateNextCode($pdo, 'materials', 'material_code', 'MAT');
+            $code = generateNextMaterialCode($pdo, $record['category_code'] ?? null);
             $qr = generateQrPayload($code);
-            $categoryId = resolveMaterialCategoryId($pdo, $record['name'], '');
+            $categoryId = resolveMaterialCategoryId($pdo, $record['category_code'] ?? null);
 
             // category_code/book_qty/count_date/ledger_no only come from the
             // stocktake-report format; the other two formats leave them null.
