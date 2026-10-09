@@ -1,19 +1,21 @@
 <?php
 require_once __DIR__ . '/../includes/header.php';
-requireAdmin();
+requireLogin();
 $pdo = getDbConnection();
 $storageLocations = $pdo->query('SELECT * FROM storage_locations ORDER BY name')->fetchAll();
 $materialCategories = $pdo->query("SELECT * FROM categories WHERE item_type = 'material' ORDER BY name")->fetchAll();
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3>จัดการวัสดุสิ้นเปลือง</h3>
+    <h3><?= isAdmin() ? 'จัดการวัสดุสิ้นเปลือง' : 'วัสดุสิ้นเปลือง' ?></h3>
+    <?php if (isAdmin()): ?>
     <div>
         <a href="qr_print.php?type=material" target="_blank" class="btn btn-outline-secondary"><i class="bi bi-qr-code"></i> พิมพ์ QR Code</a>
         <a href="catalog_print.php?type=material" target="_blank" class="btn btn-outline-secondary"><i class="bi bi-journal-richtext"></i> พิมพ์แคตตาล็อก</a>
         <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#importModal"><i class="bi bi-upload"></i> นำเข้า Excel</button>
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#materialModal" onclick="resetMaterialForm()"><i class="bi bi-plus-lg"></i> เพิ่มวัสดุ</button>
     </div>
+    <?php endif; ?>
 </div>
 
 <div class="mb-3 row g-2">
@@ -45,6 +47,7 @@ $materialCategories = $pdo->query("SELECT * FROM categories WHERE item_type = 'm
 </table>
 </div>
 
+<?php if (isAdmin()): ?>
 <!-- Add/Edit modal -->
 <div class="modal fade" id="materialModal" tabindex="-1">
     <div class="modal-dialog">
@@ -186,6 +189,8 @@ $materialCategories = $pdo->query("SELECT * FROM categories WHERE item_type = 'm
         </div>
     </div>
 </div>
+<?php endif; ?>
 
+<script>const IS_ADMIN = <?= json_encode(isAdmin()) ?>;</script>
 <script src="<?= BASE_URL ?>assets/js/materials.js<?= assetVersion('assets/js/materials.js') ?>"></script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

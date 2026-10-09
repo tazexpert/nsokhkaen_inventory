@@ -50,6 +50,10 @@ function loadMaterials(keyword = '') {
             const thumb = m.image_path
                 ? `<img src="${imageUrl(m.image_path)}" alt="" style="width:40px;height:40px;object-fit:cover;" class="rounded">`
                 : `<span class="text-muted d-inline-flex align-items-center justify-content-center" style="width:40px;height:40px;"><i class="bi bi-image"></i></span>`;
+            const actions = IS_ADMIN ? `
+                        <button class="btn btn-sm btn-outline-success" title="รับเข้าสต็อก" onclick="openReceiveStock(${m.id}, '${(m.name || '').replace(/'/g, "\\'")}', ${m.stock_qty}, '${m.unit}')"><i class="bi bi-box-arrow-in-down"></i></button>
+                        <button class="btn btn-sm btn-outline-primary" onclick="editMaterial(${m.id})"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteMaterial(${m.id})"><i class="bi bi-trash"></i></button>` : '';
             tbody.append(`
                 <tr>
                     <td>${thumb}</td>
@@ -60,11 +64,7 @@ function loadMaterials(keyword = '') {
                     <td>${m.unit}</td>
                     <td>${Number(m.unit_cost).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
                     <td>${m.storage_location || '-'}</td>
-                    <td class="text-end">
-                        <button class="btn btn-sm btn-outline-success" title="รับเข้าสต็อก" onclick="openReceiveStock(${m.id}, '${(m.name || '').replace(/'/g, "\\'")}', ${m.stock_qty}, '${m.unit}')"><i class="bi bi-box-arrow-in-down"></i></button>
-                        <button class="btn btn-sm btn-outline-primary" onclick="editMaterial(${m.id})"><i class="bi bi-pencil"></i></button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteMaterial(${m.id})"><i class="bi bi-trash"></i></button>
-                    </td>
+                    <td class="text-end">${actions}</td>
                 </tr>
             `);
         });
