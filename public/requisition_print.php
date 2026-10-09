@@ -72,14 +72,6 @@ function formatThaiDate(string $datetime): string
 <head>
     <meta charset="UTF-8">
     <title>ใบเบิกวัสดุ เลขที่ <?= htmlspecialchars($requisition['requisition_no']) ?></title>
-    <!-- Embeds the font instead of relying on it being installed on whatever
-         machine opens this page - a PC without TH Sarabun New installed
-         silently falls back to Tahoma, which renders Thai vowels/tone marks
-         differently and looks "wrong" even though nothing is actually broken.
-         Google Fonts' Sarabun is metric-compatible with TH Sarabun New. -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
     <style>
         /* mm is a physical unit, so .page's min-height matches the real A4
            printable area consistently, unlike 100vh (which some print/PDF
@@ -87,7 +79,7 @@ function formatThaiDate(string $datetime): string
            paper size). */
         @page { size: A4; margin: 12mm 15mm; }
         html, body { height: 100%; margin: 0; }
-        body { font-family: 'TH Sarabun New', 'Sarabun', 'Tahoma', sans-serif; font-size: 16pt; line-height: 1.3; color: #000; }
+        body { font-family: 'TH Sarabun New', 'Tahoma', sans-serif; font-size: 16pt; line-height: 1.3; color: #000; }
         .page { min-height: calc(297mm - 24mm); box-sizing: border-box; padding: 0; display: flex; flex-direction: column; }
         @media screen {
             .page { min-height: 100vh; padding: 12px 20px; }
