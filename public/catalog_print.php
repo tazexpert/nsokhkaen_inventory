@@ -54,39 +54,37 @@ $pages = array_chunk($rows, 6);
             border: 1px solid #999;
             border-radius: 8px;
             padding: 14px;
-            display: flex;
-            align-items: center;
-            gap: 16px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto auto;
+            gap: 8px 14px;
             page-break-inside: avoid;
         }
+        .card .photo,
+        .card .photo-placeholder,
+        .card .qr {
+            grid-row: 1;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+        }
+        .card .photo, .card .photo-placeholder { grid-column: 1; }
+        .card .qr { grid-column: 2; }
         .card .photo {
-            width: 110px;
-            height: 110px;
             object-fit: cover;
             border: 1px solid #ccc;
             border-radius: 6px;
-            flex-shrink: 0;
         }
         .card .photo-placeholder {
-            width: 110px;
-            height: 110px;
             border: 1px dashed #ccc;
             border-radius: 6px;
-            flex-shrink: 0;
             display: flex;
             align-items: center;
             justify-content: center;
             color: #bbb;
             font-size: 13px;
         }
-        .card .qr {
-            width: 100px;
-            height: 100px;
-            flex-shrink: 0;
-        }
-        .card .info { flex: 1; min-width: 0; }
-        .card .code { font-size: 16px; color: #555; }
-        .card .name { font-weight: bold; font-size: 24px; margin-top: 4px; line-height: 1.25; }
+        .card .code { grid-column: 1; grid-row: 2; font-size: 14px; color: #555; }
+        .card .name { grid-column: 1; grid-row: 3; font-weight: bold; font-size: 24px; line-height: 1.25; }
         @media print {
             .toolbar { display: none; }
         }
@@ -111,10 +109,8 @@ $pages = array_chunk($rows, 6);
                     <div class="photo-placeholder">ไม่มีรูป</div>
                 <?php endif; ?>
                 <img class="qr" src="qr_image.php?data=<?= urlencode(buildQrScanUrl($item['qr_code'])) ?>" alt="QR">
-                <div class="info">
-                    <div class="code"><?= htmlspecialchars($item['code']) ?></div>
-                    <div class="name"><?= htmlspecialchars($item['name']) ?></div>
-                </div>
+                <div class="code"><?= htmlspecialchars($item['code']) ?></div>
+                <div class="name"><?= htmlspecialchars($item['name']) ?></div>
             </div>
         <?php endforeach; ?>
     </div>
