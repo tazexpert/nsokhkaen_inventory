@@ -119,6 +119,7 @@ function cartAddMaterial(PDO $pdo): void
         'unit' => $material['unit'],
         'quantity' => $quantity,
         'note' => $note,
+        'image_path' => $material['image_path'],
         'display' => "{$quantity} {$material['unit']}",
     ];
     $_SESSION['requisition_draft'] = $draft;
@@ -164,6 +165,7 @@ function cartAddAsset(PDO $pdo, array $user): void
         'unit' => null,
         'quantity' => 1,
         'note' => $note,
+        'image_path' => $asset['image_path'],
         'borrower_name' => $user['full_name'],
         'display' => 'ยืมโดย ' . $user['full_name'],
     ];

@@ -36,7 +36,7 @@ $draft = $_SESSION['requisition_draft'] ?? [
             </div>
             <div class="card-body p-0">
                 <table class="table table-sm mb-0">
-                    <thead><tr><th>รายการ</th><th>จำนวน</th><th></th></tr></thead>
+                    <thead><tr><th style="width:44px;">รูป</th><th>รายการ</th><th>จำนวน</th><th></th></tr></thead>
                     <tbody id="cartBody"></tbody>
                 </table>
             </div>
@@ -232,14 +232,18 @@ function renderCart(items) {
     const tbody = $('#cartBody').empty();
 
     if (items.length === 0) {
-        tbody.append('<tr id="cartEmptyRow"><td colspan="3" class="text-center text-muted py-3">ยังไม่มีรายการ — สแกนแล้วกด "เพิ่มลงใบเบิก"</td></tr>');
+        tbody.append('<tr id="cartEmptyRow"><td colspan="4" class="text-center text-muted py-3">ยังไม่มีรายการ — สแกนแล้วกด "เพิ่มลงใบเบิก"</td></tr>');
         $('#cartFormWrapper').hide();
         return;
     }
 
     items.forEach((item, index) => {
+        const thumb = item.image_path
+            ? `<img src="${BASE_URL_JS}${item.image_path}" alt="" style="width:36px;height:36px;object-fit:cover;" class="rounded">`
+            : `<span class="text-muted d-inline-flex align-items-center justify-content-center" style="width:36px;height:36px;"><i class="bi bi-image"></i></span>`;
         tbody.append(`
             <tr>
+                <td>${thumb}</td>
                 <td>${item.name}${item.item_type === 'asset' ? ' <span class="badge bg-success">ครุภัณฑ์</span>' : ''}</td>
                 <td>${item.display}</td>
                 <td class="text-end">
