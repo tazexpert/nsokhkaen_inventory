@@ -6,8 +6,8 @@ function loadRequisitions() {
     const params = {
         action: 'list',
         keyword: $('#f_keyword').val(),
-        start_date: $('#f_start').val(),
-        end_date: $('#f_end').val(),
+        start_date: thaiDateSelectGet('f_start'),
+        end_date: thaiDateSelectGet('f_end'),
     };
 
     $.get(REQ_API, params, function (res) {

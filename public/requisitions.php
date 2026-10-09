@@ -11,11 +11,11 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label">วันที่เริ่มต้น</label>
-                <input type="date" id="f_start" class="form-control">
+                <?php renderThaiDateSelect('f_start') ?>
             </div>
             <div class="col-md-3">
                 <label class="form-label">วันที่สิ้นสุด</label>
-                <input type="date" id="f_end" class="form-control">
+                <?php renderThaiDateSelect('f_end') ?>
             </div>
             <div class="col-md-2 d-flex align-items-end">
                 <button type="button" class="btn btn-primary w-100" onclick="loadRequisitions()">ค้นหา</button>
@@ -23,6 +23,8 @@
         </div>
     </div>
 </div>
+
+<script src="<?= BASE_URL ?>assets/js/thai-date-select.js<?= assetVersion('assets/js/thai-date-select.js') ?>"></script>
 
 <div class="table-responsive">
 <table class="table table-striped align-middle" id="requisitionsTable">

@@ -1,25 +1,26 @@
 <?php
+/**
+ * Reports page data - one "summary" action returns everything the page
+ * needs in a single call:
+ *   - items: materials withdrawn within the date range (quantity + current
+ *     value), used for both the bar chart and the value table.
+ *   - total_value: sum of every item's value, for the table's total row.
+ *   - low_stock: ALL materials currently at/under their reorder point -
+ *     a live snapshot, not scoped to the search date range.
+ */
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/functions.php';
 
 requireAdminApi();
 $pdo = getDbConnection();
-$action = $_REQUEST['action'] ?? 'summary';
 
-$keyword = sanitizeString($_GET['keyword'] ?? '');
 $startDate = sanitizeString($_GET['start_date'] ?? '');
 $endDate = sanitizeString($_GET['end_date'] ?? '');
 
-$data = buildReportData($pdo, $keyword, $startDate, $endDate);
+jsonResponse(['success' => true, 'data' => buildReportData($pdo, $startDate, $endDate)]);
 
-if ($action === 'export') {
-    exportReportExcel($data);
-} else {
-    jsonResponse(['success' => true, 'data' => $data]);
-}
-
-function buildReportData(PDO $pdo, string $keyword, string $startDate, string $endDate): array
+function buildReportData(PDO $pdo, string $startDate, string $endDate): array
 {
     $dateCondition = '';
     $params = [];
@@ -32,46 +33,42 @@ function buildReportData(PDO $pdo, string $keyword, string $startDate, string $e
         $params['end_date'] = $endDate . ' 23:59:59';
     }
 
-    $sql = "SELECT m.id, m.name, m.stock_qty,
-                COALESCE(SUM(CASE WHEN mt.transaction_type = 'withdraw' THEN mt.quantity ELSE 0 END), 0) AS tx_quantity
-            FROM materials m
-            LEFT JOIN material_transactions mt ON mt.material_id = m.id $dateCondition
-            WHERE 1=1";
-    if ($keyword !== '') {
-        $sql .= ' AND m.name LIKE :keyword';
-        $params['keyword'] = "%$keyword%";
-    }
-    $sql .= ' GROUP BY m.id, m.name, m.stock_qty ORDER BY m.name';
-
+    // Current unit_cost is used for valuation - material_transactions doesn't
+    // keep a historical price per withdrawal, so there's no "price at the time"
+    // to report instead.
+    $sql = "SELECT m.name, m.unit, m.unit_cost, SUM(mt.quantity) AS qty
+            FROM material_transactions mt
+            JOIN materials m ON m.id = mt.material_id
+            WHERE mt.transaction_type = 'withdraw' $dateCondition
+            GROUP BY m.id, m.name, m.unit, m.unit_cost
+            HAVING SUM(mt.quantity) > 0
+            ORDER BY qty DESC";
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
-    $materials = $stmt->fetchAll();
+    $rows = $stmt->fetchAll();
 
-    $result = [];
-    foreach ($materials as $m) {
-        $result[] = [
-            'name' => $m['name'],
-            'tx_quantity' => (int) $m['tx_quantity'],
-            'balance' => $m['stock_qty'] . ' (คงเหลือ)',
+    $items = [];
+    $totalValue = 0.0;
+    foreach ($rows as $row) {
+        $qty = (int) $row['qty'];
+        $unitCost = (float) $row['unit_cost'];
+        $value = $qty * $unitCost;
+        $totalValue += $value;
+        $items[] = [
+            'name' => $row['name'],
+            'unit' => $row['unit'],
+            'qty' => $qty,
+            'unit_cost' => $unitCost,
+            'value' => $value,
         ];
     }
 
-    return $result;
-}
+    $lowStock = $pdo->query("SELECT name, unit, stock_qty, min_stock
+        FROM materials WHERE stock_qty <= min_stock ORDER BY name")->fetchAll();
 
-function exportReportExcel(array $data): void
-{
-    $rows = [['ชื่อวัสดุ', 'จำนวนที่เบิกในช่วงเวลา', 'ยอดคงเหลือ']];
-
-    foreach ($data as $r) {
-        $rows[] = [
-            $r['name'],
-            $r['tx_quantity'],
-            $r['balance'],
-        ];
-    }
-
-    \Shuchkin\SimpleXLSXGen::fromArray($rows, 'รายงาน')
-        ->downloadAs('report_' . date('Ymd_His') . '.xlsx');
-    exit;
+    return [
+        'items' => $items,
+        'total_value' => $totalValue,
+        'low_stock' => $lowStock,
+    ];
 }
