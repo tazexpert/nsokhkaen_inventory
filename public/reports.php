@@ -27,13 +27,12 @@ requireAdmin();
 </div>
 
 <div id="reportSheet">
-    <div class="text-center mb-4 d-none d-print-block">
-        <h4 class="mb-1">รายงานการเบิกวัสดุ</h4>
-        <div class="small text-muted">สำนักงานสถิติจังหวัดขอนแก่น</div>
-        <div class="small text-muted" id="reportRangeText"></div>
-    </div>
-
     <div class="card mb-4 report-section" id="chartSection">
+        <div class="text-center mb-2 d-none d-print-block">
+            <h4 class="mb-1">รายงานการเบิกวัสดุ</h4>
+            <div class="small text-muted">สำนักงานสถิติจังหวัดขอนแก่น</div>
+            <div class="small text-muted" id="reportRangeText"></div>
+        </div>
         <div class="card-header">1. กราฟจำนวนการเบิกวัสดุ</div>
         <div class="card-body">
             <div class="chart-bars" id="chartBars"></div>
@@ -162,14 +161,24 @@ requireAdmin();
         #chartSection {
             page: chart-page;
             break-after: page;
-            display: flex;
-            flex-direction: column;
-            height: calc(210mm - 24mm); /* landscape page height minus @page margins */
-            overflow: hidden; /* clips the rotated bar labels so they can't bleed onto the next printed page */
         }
-        #chartSection .card-body { flex: 1; display: flex; flex-direction: column; }
+        /* The title block now lives inside #chartSection (merged onto the
+           same printed page) - shrink it in print so it doesn't crowd the
+           chart below it. */
+        #chartSection .d-print-block { margin-bottom: 6px !important; }
+        #chartSection .d-print-block h4 { font-size: 16pt; margin-bottom: 2px !important; }
+        #chartSection .d-print-block .small { font-size: 10pt; }
         #valueSection { break-after: page; }
-        .chart-bars { flex: 1; height: auto; margin-bottom: 60px; }
+        /* A generous fixed height rather than stretching to exactly fill
+           the landscape page: an exact-fit (flex:1 inside a page-height
+           container) looked right in a plain screenshot but Chromium's
+           actual PDF print pass lays the page out slightly differently,
+           and the smallest shortfall fragments the chart across 2 pages
+           instead of clipping it (reproduced repeatedly in testing). This
+           number comfortably fits a landscape A4 page (~186mm tall content
+           area) alongside the title/header above and the rotated labels
+           below, with room to spare - safety margin, not a tight fit. */
+        .chart-bars { height: 120mm; margin-bottom: 40px; }
         .bar { max-width: 40px; }
         .bar-value { font-size: 13px; }
         .bar-label { font-size: 12px; max-width: 140px; }
