@@ -24,7 +24,13 @@ switch ($action) {
 }
 
 /**
- * Step 1: identify the material the scanned QR code belongs to.
+ * Step 1: identify the material the scanned QR code belongs to - also
+ * doubles as a manual search by name/code, since the same box ("กรอกรหัส
+ * QR ด้วยตนเอง") is used for both. Resolution order:
+ *   1. Exact QR code match (what an actual scan sends).
+ *   2. Otherwise, search by name/code - if exactly one material matches,
+ *      resolve straight to it like a scan would; if several match, return
+ *      the list for the user to pick from.
  */
 function lookupQrCode(PDO $pdo): void
 {
@@ -41,7 +47,20 @@ function lookupQrCode(PDO $pdo): void
         jsonResponse(['success' => true, 'item_type' => 'material', 'data' => $material]);
     }
 
-    jsonResponse(['success' => false, 'message' => 'ไม่พบรายการที่ตรงกับ QR Code นี้ในระบบ'], 404);
+    // Two distinct placeholders: PDO with ATTR_EMULATE_PREPARES=false (native
+    // prepared statements) does not allow the same named parameter twice.
+    $stmt = $pdo->prepare('SELECT * FROM materials WHERE name LIKE :kw1 OR material_code LIKE :kw2 ORDER BY name LIMIT 20');
+    $stmt->execute(['kw1' => "%$qr%", 'kw2' => "%$qr%"]);
+    $matches = $stmt->fetchAll();
+
+    if (count($matches) === 1) {
+        jsonResponse(['success' => true, 'item_type' => 'material', 'data' => $matches[0]]);
+    }
+    if (count($matches) > 1) {
+        jsonResponse(['success' => true, 'item_type' => 'search_results', 'data' => $matches]);
+    }
+
+    jsonResponse(['success' => false, 'message' => 'ไม่พบรายการที่ตรงกับ QR Code หรือชื่อวัสดุนี้ในระบบ'], 404);
 }
 
 /**

@@ -21,7 +21,7 @@ $draft = $_SESSION['requisition_draft'] ?? [
                     ใช้แอปกล้อง/สแกน QR ของเครื่องสแกนสติ๊กเกอร์ รายการจะถูกเพิ่มลงใบเบิกนี้ให้อัตโนมัติ
                 </p>
                 <div class="input-group">
-                    <input type="text" id="manualQr" class="form-control" placeholder="หรือกรอกรหัส QR ด้วยตนเอง">
+                    <input type="text" id="manualQr" class="form-control" placeholder="หรือกรอกรหัส QR หรือค้นหาด้วยชื่อวัสดุ">
                     <button class="btn btn-outline-secondary" id="btnManualLookup">ค้นหา</button>
                 </div>
             </div>
@@ -75,6 +75,13 @@ $('#btnManualLookup').on('click', function () {
     if (qr) lookupQr(qr);
 });
 
+$('#manualQr').on('keypress', function (e) {
+    if (e.which === 13) {
+        const qr = $(this).val().trim();
+        if (qr) lookupQr(qr);
+    }
+});
+
 function lookupQr(qrCode) {
     $('#alertBox').empty();
     $('#submitResultBox').empty();
@@ -91,7 +98,44 @@ function renderResult(res) {
     }
 
     $('#resultCard').removeClass('d-none');
-    renderMaterial(res.data);
+    if (res.item_type === 'search_results') {
+        renderSearchResults(res.data);
+    } else {
+        renderMaterial(res.data);
+    }
+}
+
+// When the manual box doesn't match a QR code exactly, the API falls back to
+// searching by name/code instead - if that turns up more than one material,
+// show them as a pickable list rather than guessing which one was meant.
+let lastSearchResults = [];
+
+function renderSearchResults(materials) {
+    lastSearchResults = materials;
+    const rows = materials.map((m) => {
+        const thumb = m.image_path
+            ? `<img src="${BASE_URL_JS}${m.image_path}" alt="" style="width:36px;height:36px;object-fit:cover;" class="rounded">`
+            : `<span class="text-muted d-inline-flex align-items-center justify-content-center" style="width:36px;height:36px;"><i class="bi bi-image"></i></span>`;
+        return `
+            <button type="button" class="list-group-item list-group-item-action d-flex align-items-center gap-2" onclick="selectSearchResult(${m.id})">
+                ${thumb}
+                <span class="flex-grow-1">
+                    <div>${m.name}</div>
+                    <small class="text-muted">${m.material_code}</small>
+                </span>
+                <span class="badge bg-secondary">${m.stock_qty} ${m.unit}</span>
+            </button>
+        `;
+    }).join('');
+    $('#resultBody').html(`
+        <p class="text-muted mb-2">พบ ${materials.length} รายการที่ตรงกับคำค้นหา เลือกรายการที่ต้องการ:</p>
+        <div class="list-group">${rows}</div>
+    `);
+}
+
+function selectSearchResult(materialId) {
+    const m = lastSearchResults.find((x) => x.id === materialId);
+    if (m) renderMaterial(m);
 }
 
 function renderMaterial(m) {
