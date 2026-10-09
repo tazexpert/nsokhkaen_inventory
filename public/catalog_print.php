@@ -84,7 +84,7 @@ $pages = array_chunk($rows, 6);
             font-size: 13px;
         }
         .card .code { grid-column: 1; grid-row: 2; font-size: 14px; color: #555; }
-        .card .name { grid-column: 1; grid-row: 3; font-weight: bold; font-size: 24px; line-height: 1.25; }
+        .card .name { grid-column: 1 / -1; grid-row: 3; font-weight: bold; font-size: 24px; line-height: 1.25; }
         @media print {
             .toolbar { display: none; }
         }
