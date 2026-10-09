@@ -73,6 +73,32 @@ function formatThaiDate(string $datetime): string
     <meta charset="UTF-8">
     <title>ใบเบิกวัสดุ เลขที่ <?= htmlspecialchars($requisition['requisition_no']) ?></title>
     <style>
+        /* Embeds the font file from this server instead of relying on it
+           being installed on whatever machine opens the page - a PC without
+           TH Sarabun New installed would otherwise silently fall back to
+           Tahoma, which renders Thai vowels/tone marks differently. Serving
+           the real font bundled with the project (not a Google Fonts
+           substitute) keeps this exact look and the page's measurements. */
+        @font-face {
+            font-family: 'TH Sarabun New';
+            src: url('<?= BASE_URL ?>assets/fonts/THSarabunNew.ttf') format('truetype');
+            font-weight: normal; font-style: normal;
+        }
+        @font-face {
+            font-family: 'TH Sarabun New';
+            src: url('<?= BASE_URL ?>assets/fonts/THSarabunNew-Bold.ttf') format('truetype');
+            font-weight: bold; font-style: normal;
+        }
+        @font-face {
+            font-family: 'TH Sarabun New';
+            src: url('<?= BASE_URL ?>assets/fonts/THSarabunNew-Italic.ttf') format('truetype');
+            font-weight: normal; font-style: italic;
+        }
+        @font-face {
+            font-family: 'TH Sarabun New';
+            src: url('<?= BASE_URL ?>assets/fonts/THSarabunNew-BoldItalic.ttf') format('truetype');
+            font-weight: bold; font-style: italic;
+        }
         /* mm is a physical unit, so .page's min-height matches the real A4
            printable area consistently, unlike 100vh (which some print/PDF
            engines size against an on-screen viewport instead of the actual

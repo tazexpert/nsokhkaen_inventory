@@ -59,15 +59,13 @@ switch ($action) {
 
 function getDraft(): array
 {
-    return $_SESSION['requisition_draft'] ?? ['purpose' => '', 'requester_name' => '', 'requester_position' => '', 'items' => []];
+    return $_SESSION['requisition_draft'] ?? ['purpose' => '', 'items' => []];
 }
 
 function saveDraftMeta(): void
 {
     $draft = getDraft();
     $draft['purpose'] = sanitizeString($_POST['purpose'] ?? $draft['purpose']);
-    $draft['requester_name'] = sanitizeString($_POST['requester_name'] ?? $draft['requester_name']);
-    $draft['requester_position'] = sanitizeString($_POST['requester_position'] ?? $draft['requester_position']);
     $_SESSION['requisition_draft'] = $draft;
 }
 
@@ -142,13 +140,18 @@ function createRequisition(PDO $pdo, array $user): void
     saveDraftMeta();
     $draft = getDraft();
     $purpose = $draft['purpose'];
-    $requesterName = $draft['requester_name'];
-    $requesterPosition = $draft['requester_position'];
     $items = $draft['items'];
 
     if (count($items) === 0) {
         jsonResponse(['success' => false, 'message' => 'กรุณาสแกนหรือเพิ่มรายการอย่างน้อย 1 รายการ'], 422);
     }
+
+    // ผู้เบิก is always the logged-in account making the requisition (not a
+    // free-typed name) - the printed/viewed slip already pulls name/position
+    // straight from the users table, so there's no separate field to fill in.
+    $stmt = $pdo->prepare('SELECT full_name, position FROM users WHERE id = :id');
+    $stmt->execute(['id' => $user['id']]);
+    $requester = $stmt->fetch();
 
     try {
         $pdo->beginTransaction();
@@ -159,8 +162,8 @@ function createRequisition(PDO $pdo, array $user): void
         $insertReq->execute([
             'no' => $requisitionNo,
             'purpose' => $purpose ?: null,
-            'requester_name' => $requesterName ?: null,
-            'requester_position' => $requesterPosition ?: null,
+            'requester_name' => $requester['full_name'] ?? null,
+            'requester_position' => $requester['position'] ?? null,
             'created_by' => $user['id'],
         ]);
         $requisitionId = (int) $pdo->lastInsertId();

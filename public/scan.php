@@ -7,8 +7,6 @@ require_once __DIR__ . '/../includes/header.php';
 // a JS-only cart would be wiped out by that; session storage survives it).
 $draft = $_SESSION['requisition_draft'] ?? [
     'purpose' => '',
-    'requester_name' => $user['full_name'] ?? '',
-    'requester_position' => $user['position'] ?? '',
     'items' => [],
 ];
 ?>
@@ -44,16 +42,6 @@ $draft = $_SESSION['requisition_draft'] ?? [
                 <div class="mb-2">
                     <label class="form-label">ขอเบิกวัสดุเพื่อใช้งาน</label>
                     <input type="text" class="form-control" id="req_purpose" value="<?= htmlspecialchars($draft['purpose']) ?>" placeholder="เช่น ใช้ในงานประชุม...">
-                </div>
-                <div class="row">
-                    <div class="col-7 mb-2">
-                        <label class="form-label">ชื่อผู้เบิก</label>
-                        <input type="text" class="form-control" id="req_requester_name" value="<?= htmlspecialchars($draft['requester_name']) ?>">
-                    </div>
-                    <div class="col-5 mb-2">
-                        <label class="form-label">ตำแหน่ง</label>
-                        <input type="text" class="form-control" id="req_requester_position" value="<?= htmlspecialchars($draft['requester_position']) ?>">
-                    </div>
                 </div>
                 <button class="btn btn-primary w-100" onclick="submitRequisition()">
                     <i class="bi bi-save"></i> บันทึกใบเบิก
@@ -143,8 +131,6 @@ function addMaterialToCart(materialId) {
         quantity,
         note,
         purpose: $('#req_purpose').val(),
-        requester_name: $('#req_requester_name').val(),
-        requester_position: $('#req_requester_position').val(),
     })
         .done((res) => {
             renderCart(res.data.items);
@@ -198,8 +184,6 @@ function submitRequisition() {
     const payload = {
         action: 'create',
         purpose: $('#req_purpose').val(),
-        requester_name: $('#req_requester_name').val(),
-        requester_position: $('#req_requester_position').val(),
     };
 
     $.post(REQ_API_URL, payload)
@@ -213,7 +197,7 @@ function submitRequisition() {
                 </div>
             `);
             renderCart([]);
-            $('#req_purpose, #req_requester_name, #req_requester_position').val('');
+            $('#req_purpose').val('');
         })
         .fail((xhr) => showAlert(xhr.responseJSON?.message || 'เกิดข้อผิดพลาด'));
 }

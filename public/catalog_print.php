@@ -24,14 +24,22 @@ $pages = array_chunk($rows, 6);
 <head>
     <meta charset="UTF-8">
     <title><?= htmlspecialchars($title) ?></title>
-    <!-- Embeds the font instead of relying on it being installed on whatever
-         machine opens this page - see public/requisition_print.php for why. -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
     <style>
+        /* Embeds the font file from this server instead of relying on it
+           being installed locally or on an external CDN - see
+           public/requisition_print.php for why. */
+        @font-face {
+            font-family: 'TH Sarabun New';
+            src: url('<?= BASE_URL ?>assets/fonts/THSarabunNew.ttf') format('truetype');
+            font-weight: normal; font-style: normal;
+        }
+        @font-face {
+            font-family: 'TH Sarabun New';
+            src: url('<?= BASE_URL ?>assets/fonts/THSarabunNew-Bold.ttf') format('truetype');
+            font-weight: bold; font-style: normal;
+        }
         @page { size: A4 portrait; margin: 12mm; }
-        body { font-family: 'TH Sarabun New', 'Sarabun', 'Tahoma', sans-serif; margin: 20px; color: #000; }
+        body { font-family: 'TH Sarabun New', 'Tahoma', sans-serif; margin: 20px; color: #000; }
         .toolbar { margin-bottom: 20px; }
         h2 { text-align: center; margin-bottom: 2px; }
         .subtitle { text-align: center; color: #555; margin-top: 0; margin-bottom: 24px; }
