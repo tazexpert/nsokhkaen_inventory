@@ -13,7 +13,7 @@ $draft = $_SESSION['requisition_draft'] ?? [
 ];
 ?>
 
-<h3 class="mb-4">สแกน QR Code เพื่อเบิก/ยืม/คืน</h3>
+<h3 class="mb-4">สแกน QR Code เพื่อเบิกวัสดุ</h3>
 
 <div class="row g-4">
     <div class="col-md-5">
@@ -42,7 +42,7 @@ $draft = $_SESSION['requisition_draft'] ?? [
             </div>
             <div class="card-body border-top" id="cartFormWrapper" style="<?= $draft['items'] ? '' : 'display:none;' ?>">
                 <div class="mb-2">
-                    <label class="form-label">ขอเบิกวัสดุ/ครุภัณฑ์เพื่อใช้งาน</label>
+                    <label class="form-label">ขอเบิกวัสดุเพื่อใช้งาน</label>
                     <input type="text" class="form-control" id="req_purpose" value="<?= htmlspecialchars($draft['purpose']) ?>" placeholder="เช่น ใช้ในงานประชุม...">
                 </div>
                 <div class="row">
@@ -103,12 +103,7 @@ function renderResult(res) {
     }
 
     $('#resultCard').removeClass('d-none');
-
-    if (res.item_type === 'material') {
-        renderMaterial(res.data);
-    } else {
-        renderAsset(res.data);
-    }
+    renderMaterial(res.data);
 }
 
 function renderMaterial(m) {
@@ -159,62 +154,6 @@ function addMaterialToCart(materialId) {
         .fail((xhr) => showAlert(xhr.responseJSON?.message || 'เกิดข้อผิดพลาด'));
 }
 
-function renderAsset(a) {
-    const statusMap = { available: 'พร้อมใช้งาน', borrowed: 'ถูกยืมอยู่', maintenance: 'ซ่อมบำรุง', disposed: 'จำหน่ายแล้ว' };
-    let actionHtml = '';
-
-    if (a.status === 'available') {
-        actionHtml = `
-            <div class="mb-3">
-                <label class="form-label">หมายเหตุ</label>
-                <input type="text" class="form-control" id="borrowNote">
-            </div>
-            <button class="btn btn-warning" onclick="addAssetToCart(${a.id})">
-                <i class="bi bi-cart-plus"></i> เพิ่มลงใบเบิก (ยืม)
-            </button>
-        `;
-    } else if (a.status === 'borrowed') {
-        actionHtml = `
-            <div class="mb-3">
-                <label class="form-label">หมายเหตุการคืน</label>
-                <input type="text" class="form-control" id="returnNote">
-            </div>
-            <button class="btn btn-success" onclick="doReturn(${a.id})">บันทึกการคืน</button>
-        `;
-    } else {
-        actionHtml = `<div class="alert alert-secondary mb-0">ครุภัณฑ์รายการนี้ไม่สามารถยืม/คืนได้ในสถานะปัจจุบัน</div>`;
-    }
-
-    const image = a.image_path ? `<img src="${BASE_URL_JS}${a.image_path}" alt="" class="img-fluid rounded mb-2" style="max-height:160px;">` : '';
-    $('#resultBody').html(`
-        <span class="badge bg-success mb-2">ครุภัณฑ์</span>
-        ${image}
-        <h5>${a.name}</h5>
-        <p class="mb-1">รหัส: ${a.asset_code}</p>
-        <p class="mb-3">สถานะ: <strong>${statusMap[a.status] || a.status}</strong></p>
-        ${actionHtml}
-    `);
-}
-
-function addAssetToCart(assetId) {
-    const note = $('#borrowNote').val();
-
-    $.post(REQ_API_URL, {
-        action: 'cart_add_asset',
-        asset_id: assetId,
-        note,
-        purpose: $('#req_purpose').val(),
-        requester_name: $('#req_requester_name').val(),
-        requester_position: $('#req_requester_position').val(),
-    })
-        .done((res) => {
-            renderCart(res.data.items);
-            $('#resultCard').addClass('d-none');
-            $('#alertBox').empty();
-        })
-        .fail((xhr) => showAlert(xhr.responseJSON?.message || 'เกิดข้อผิดพลาด'));
-}
-
 function removeFromCart(index) {
     $.post(REQ_API_URL, { action: 'cart_remove', index })
         .done((res) => renderCart(res.data.items))
@@ -244,7 +183,7 @@ function renderCart(items) {
         tbody.append(`
             <tr>
                 <td>${thumb}</td>
-                <td>${item.name}${item.item_type === 'asset' ? ' <span class="badge bg-success">ครุภัณฑ์</span>' : ''}</td>
+                <td>${item.name}</td>
                 <td>${item.display}</td>
                 <td class="text-end">
                     <button class="btn btn-sm btn-outline-danger" onclick="removeFromCart(${index})"><i class="bi bi-trash"></i></button>
@@ -275,16 +214,6 @@ function submitRequisition() {
             `);
             renderCart([]);
             $('#req_purpose, #req_requester_name, #req_requester_position').val('');
-        })
-        .fail((xhr) => showAlert(xhr.responseJSON?.message || 'เกิดข้อผิดพลาด'));
-}
-
-function doReturn(assetId) {
-    const note = $('#returnNote').val();
-    $.post(SCAN_API_URL, { action: 'return', asset_id: assetId, note })
-        .done((res) => {
-            showAlert(res.message, 'success');
-            $('#resultCard').addClass('d-none');
         })
         .fail((xhr) => showAlert(xhr.responseJSON?.message || 'เกิดข้อผิดพลาด'));
 }

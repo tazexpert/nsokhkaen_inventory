@@ -5,14 +5,7 @@ require_once __DIR__ . '/../includes/functions.php';
 requireAdmin();
 
 $pdo = getDbConnection();
-$type = $_GET['type'] ?? 'material';
-
-if ($type === 'asset') {
-    $items = $pdo->query('SELECT asset_code AS code, qr_code, name FROM assets ORDER BY id')->fetchAll();
-} else {
-    $type = 'material';
-    $items = $pdo->query('SELECT material_code AS code, qr_code, name FROM materials ORDER BY id')->fetchAll();
-}
+$items = $pdo->query('SELECT material_code AS code, qr_code, name FROM materials ORDER BY id')->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="th">

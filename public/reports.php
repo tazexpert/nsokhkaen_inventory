@@ -3,7 +3,7 @@ require_once __DIR__ . '/../includes/header.php';
 requireAdmin();
 ?>
 
-<h3 class="mb-4">รายงานการเบิก/ยืม-คืน</h3>
+<h3 class="mb-4">รายงานการเบิกวัสดุ</h3>
 
 <div class="card mb-4">
     <div class="card-body">
@@ -35,7 +35,7 @@ requireAdmin();
 <table class="table table-striped" id="reportTable">
     <thead>
     <tr>
-        <th>ประเภท</th><th>ชื่อรายการ</th><th>จำนวนที่เบิก/ยืมในช่วงเวลา</th><th>ยอดคงเหลือ/สถานะปัจจุบัน</th>
+        <th>ชื่อวัสดุ</th><th>จำนวนที่เบิกในช่วงเวลา</th><th>ยอดคงเหลือ</th>
     </tr>
     </thead>
     <tbody></tbody>
@@ -59,7 +59,6 @@ function loadReport() {
         res.data.forEach((r) => {
             tbody.append(`
                 <tr>
-                    <td>${r.item_type === 'material' ? 'วัสดุสิ้นเปลือง' : 'ครุภัณฑ์'}</td>
                     <td>${r.name}</td>
                     <td>${r.tx_quantity}</td>
                     <td>${r.balance}</td>
@@ -67,7 +66,7 @@ function loadReport() {
             `);
         });
         if (!res.data.length) {
-            tbody.append('<tr><td colspan="4" class="text-center text-muted">ไม่พบข้อมูล</td></tr>');
+            tbody.append('<tr><td colspan="3" class="text-center text-muted">ไม่พบข้อมูล</td></tr>');
         }
     });
 }

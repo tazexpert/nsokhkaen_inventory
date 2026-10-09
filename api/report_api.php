@@ -50,47 +50,9 @@ function buildReportData(PDO $pdo, string $keyword, string $startDate, string $e
     $result = [];
     foreach ($materials as $m) {
         $result[] = [
-            'item_type' => 'material',
             'name' => $m['name'],
             'tx_quantity' => (int) $m['tx_quantity'],
             'balance' => $m['stock_qty'] . ' (คงเหลือ)',
-        ];
-    }
-
-    $dateConditionAsset = '';
-    $paramsAsset = [];
-    if ($startDate !== '') {
-        $dateConditionAsset .= ' AND at.created_at >= :start_date';
-        $paramsAsset['start_date'] = $startDate . ' 00:00:00';
-    }
-    if ($endDate !== '') {
-        $dateConditionAsset .= ' AND at.created_at <= :end_date';
-        $paramsAsset['end_date'] = $endDate . ' 23:59:59';
-    }
-
-    $statusLabel = ['available' => 'พร้อมใช้งาน', 'borrowed' => 'ถูกยืมอยู่', 'maintenance' => 'ซ่อมบำรุง', 'disposed' => 'จำหน่ายแล้ว'];
-
-    $sqlAsset = "SELECT a.id, a.name, a.status,
-                COALESCE(SUM(CASE WHEN at.action = 'borrow' THEN 1 ELSE 0 END), 0) AS tx_quantity
-            FROM assets a
-            LEFT JOIN asset_transactions at ON at.asset_id = a.id $dateConditionAsset
-            WHERE 1=1";
-    if ($keyword !== '') {
-        $sqlAsset .= ' AND a.name LIKE :keyword';
-        $paramsAsset['keyword'] = "%$keyword%";
-    }
-    $sqlAsset .= ' GROUP BY a.id, a.name, a.status ORDER BY a.name';
-
-    $stmt = $pdo->prepare($sqlAsset);
-    $stmt->execute($paramsAsset);
-    $assets = $stmt->fetchAll();
-
-    foreach ($assets as $a) {
-        $result[] = [
-            'item_type' => 'asset',
-            'name' => $a['name'],
-            'tx_quantity' => (int) $a['tx_quantity'],
-            'balance' => $statusLabel[$a['status']] ?? $a['status'],
         ];
     }
 
@@ -99,11 +61,10 @@ function buildReportData(PDO $pdo, string $keyword, string $startDate, string $e
 
 function exportReportExcel(array $data): void
 {
-    $rows = [['ประเภท', 'ชื่อรายการ', 'จำนวนที่เบิก/ยืมในช่วงเวลา', 'ยอดคงเหลือ/สถานะปัจจุบัน']];
+    $rows = [['ชื่อวัสดุ', 'จำนวนที่เบิกในช่วงเวลา', 'ยอดคงเหลือ']];
 
     foreach ($data as $r) {
         $rows[] = [
-            $r['item_type'] === 'material' ? 'วัสดุสิ้นเปลือง' : 'ครุภัณฑ์',
             $r['name'],
             $r['tx_quantity'],
             $r['balance'],

@@ -83,7 +83,7 @@ function createUser(PDO $pdo): void
     }
     validateLoginAndPin($username, $password, $pin);
     if ($username === '' && $pin === '') {
-        jsonResponse(['success' => false, 'message' => 'ต้องตั้งชื่อผู้ใช้+รหัสผ่าน (สำหรับเข้าสู่ระบบ) หรือ PIN (สำหรับยืมครุภัณฑ์) อย่างน้อยหนึ่งอย่าง'], 422);
+        jsonResponse(['success' => false, 'message' => 'ต้องตั้งชื่อผู้ใช้+รหัสผ่าน (สำหรับเข้าสู่ระบบ) หรือ PIN (สำหรับเบิกวัสดุ) อย่างน้อยหนึ่งอย่าง'], 422);
     }
     if ($pin !== '' && findUserByPin($pdo, $pin) !== null) {
         jsonResponse(['success' => false, 'message' => 'PIN นี้มีผู้ใช้งานอยู่แล้ว กรุณาใช้ PIN อื่น'], 422);

@@ -169,7 +169,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
 <div class="pin-screen">
-    <div class="pin-title">สแกน QR Code เพื่อเบิก/ยืม/คืน</div>
+    <div class="pin-title">สแกน QR Code เพื่อเบิกวัสดุ</div>
     <div class="pin-subtitle">สำนักงานสถิติจังหวัดขอนแก่น</div>
 
     <div class="pin-dots" id="pinDots">

@@ -16,6 +16,14 @@ if (!$requisition) {
     exit;
 }
 
+// Staff only see their own requisitions; admin sees everything.
+if (!isAdmin() && (int) $requisition['created_by'] !== (int) $user['id']) {
+    http_response_code(403);
+    echo '<div class="alert alert-danger">คุณไม่มีสิทธิ์เข้าถึงใบเบิกนี้</div>';
+    require_once __DIR__ . '/../includes/footer.php';
+    exit;
+}
+
 $itemsStmt = $pdo->prepare('SELECT * FROM requisition_items WHERE requisition_id = :id ORDER BY id');
 $itemsStmt->execute(['id' => $id]);
 $items = $itemsStmt->fetchAll();
@@ -64,7 +72,7 @@ $items = $itemsStmt->fetchAll();
     <table class="table table-striped align-middle">
         <thead>
         <tr>
-            <th>ลำดับที่</th><th>รายการ</th><th>ประเภท</th><th>หน่วยนับ</th><th>จำนวนเบิก</th><th>จำนวนจ่าย</th><th>หมายเหตุ</th>
+            <th>ลำดับที่</th><th>รายการ</th><th>หน่วยนับ</th><th>จำนวนเบิก</th><th>จำนวนจ่าย</th><th>หมายเหตุ</th>
         </tr>
         </thead>
         <tbody>
@@ -72,7 +80,6 @@ $items = $itemsStmt->fetchAll();
             <tr>
                 <td><?= $i + 1 ?></td>
                 <td><?= htmlspecialchars($item['item_name']) ?></td>
-                <td><?= $item['item_type'] === 'asset' ? '<span class="badge bg-success">ครุภัณฑ์</span>' : '<span class="badge bg-info">วัสดุ</span>' ?></td>
                 <td><?= htmlspecialchars($item['unit'] ?? '-') ?></td>
                 <td><?= (int) $item['quantity_requested'] ?></td>
                 <td><?= (int) $item['quantity_issued'] ?></td>
@@ -80,7 +87,7 @@ $items = $itemsStmt->fetchAll();
             </tr>
         <?php endforeach; ?>
         <?php if (!$items): ?>
-            <tr><td colspan="7" class="text-center text-muted">ไม่มีรายการ</td></tr>
+            <tr><td colspan="6" class="text-center text-muted">ไม่มีรายการ</td></tr>
         <?php endif; ?>
         </tbody>
     </table>

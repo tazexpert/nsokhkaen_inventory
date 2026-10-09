@@ -65,7 +65,7 @@ $afterSetupRedirect = empty($_SESSION['redirect_after_login']) ? (BASE_URL . 'pu
             </div>
             <div class="card-body">
                 <p class="text-muted small">
-                    ใช้ PIN 6 หลักแทนการล็อกอินตอนเข้าหน้า "สแกน QR Code" เพื่อเบิกวัสดุ/ยืมครุภัณฑ์ - PIN ของแต่ละคนต้องไม่ซ้ำกัน
+                    ใช้ PIN 6 หลักแทนการล็อกอินตอนเข้าหน้า "สแกน QR Code" เพื่อเบิกวัสดุ - PIN ของแต่ละคนต้องไม่ซ้ำกัน
                     และถูกเก็บแบบ hash เหมือนรหัสผ่าน (กู้คืน PIN เดิมไม่ได้ ต้องตั้งใหม่หากลืม)
                 </p>
                 <form id="pinForm">

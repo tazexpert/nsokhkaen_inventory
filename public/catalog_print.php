@@ -1,32 +1,20 @@
 <?php
-// Printable catalog of materials or assets, each item showing its photo,
-// a scannable QR code, code and name only (no other details) - large cards,
-// 2x3 (6) per A4 portrait page, for printing and keeping as a physical
-// reference binder/board.
+// Printable catalog of materials, each item showing its photo, a scannable
+// QR code, code and name only (no other details) - large cards, 2x3 (6)
+// per A4 portrait page, for printing and keeping as a physical reference
+// binder/board.
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/functions.php';
 requireAdmin();
 
 $pdo = getDbConnection();
-$type = $_GET['type'] ?? 'material';
-
-if ($type === 'asset') {
-    $rows = $pdo->query("
-        SELECT asset_code AS code, qr_code, name, image_path
-        FROM assets
-        ORDER BY asset_code ASC
-    ")->fetchAll();
-    $title = 'แคตตาล็อกครุภัณฑ์';
-} else {
-    $type = 'material';
-    $rows = $pdo->query("
-        SELECT material_code AS code, qr_code, name, image_path
-        FROM materials
-        ORDER BY material_code ASC
-    ")->fetchAll();
-    $title = 'แคตตาล็อกวัสดุสิ้นเปลือง';
-}
+$rows = $pdo->query("
+    SELECT material_code AS code, qr_code, name, image_path
+    FROM materials
+    ORDER BY material_code ASC
+")->fetchAll();
+$title = 'แคตตาล็อกวัสดุสิ้นเปลือง';
 
 // 6 cards (2 columns x 3 rows) per A4 page.
 $pages = array_chunk($rows, 6);

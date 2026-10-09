@@ -22,7 +22,7 @@ requireAdmin();
     <div class="tab-pane fade show active" id="tabUsers">
         <p class="text-muted">
             ผู้ใช้งานแต่ละคนสามารถมี <strong>ชื่อผู้ใช้+รหัสผ่าน</strong> (สำหรับเข้าสู่ระบบ), <strong>PIN 6 หลัก</strong>
-            (สำหรับยืมครุภัณฑ์ผ่านหน้าสแกน QR Code โดยไม่ต้องล็อกอิน), หรือทั้งสองอย่างก็ได้ — PIN แต่ละคนต้องไม่ซ้ำกัน
+            (สำหรับเบิกวัสดุผ่านหน้าสแกน QR Code โดยไม่ต้องล็อกอิน), หรือทั้งสองอย่างก็ได้ — PIN แต่ละคนต้องไม่ซ้ำกัน
             และถูกเก็บในฐานข้อมูลแบบ hash เช่นเดียวกับรหัสผ่าน (กู้คืน PIN เดิมไม่ได้ ต้องตั้งใหม่หากลืม)
         </p>
         <div class="d-flex justify-content-end mb-3">
@@ -170,14 +170,14 @@ requireAdmin();
                         <div class="form-text" id="u_password_hint" style="display:none;">เว้นว่างไว้หากไม่ต้องการเปลี่ยนรหัสผ่าน</div>
                     </div>
                     <hr>
-                    <div class="form-text mb-2">สำหรับยืมครุภัณฑ์ผ่านหน้าสแกน QR Code โดยไม่ต้องล็อกอิน</div>
+                    <div class="form-text mb-2">สำหรับเบิกวัสดุผ่านหน้าสแกน QR Code โดยไม่ต้องล็อกอิน</div>
                     <div class="mb-3">
                         <label class="form-label" id="u_pin_label">PIN (6 หลัก)</label>
                         <input type="password" inputmode="numeric" pattern="\d{6}" maxlength="6" class="form-control" id="u_pin" placeholder="เช่น 123456" autocomplete="off">
                         <div class="form-text" id="u_pin_hint" style="display:none;">เว้นว่างไว้หากไม่ต้องการเปลี่ยน PIN เดิม</div>
                         <div class="form-check mt-2" id="u_remove_pin_wrap" style="display:none;">
                             <input class="form-check-input" type="checkbox" id="u_remove_pin">
-                            <label class="form-check-label" for="u_remove_pin">ลบ PIN เดิม (ยกเลิกสิทธิ์ยืมด้วย PIN)</label>
+                            <label class="form-check-label" for="u_remove_pin">ลบ PIN เดิม (ยกเลิกสิทธิ์เบิกด้วย PIN)</label>
                         </div>
                     </div>
                 </form>

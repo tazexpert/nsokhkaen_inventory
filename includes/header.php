@@ -51,9 +51,6 @@ $loggedInViaPin = $user['via_pin'] ?? false;
                     <a class="nav-link <?= $currentPage === 'materials.php' ? 'active' : '' ?>" href="<?= BASE_URL ?>public/materials.php">วัสดุสิ้นเปลือง</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <?= $currentPage === 'assets.php' ? 'active' : '' ?>" href="<?= BASE_URL ?>public/assets.php">ครุภัณฑ์</a>
-                </li>
-                <li class="nav-item">
                     <a class="nav-link <?= $currentPage === 'reports.php' ? 'active' : '' ?>" href="<?= BASE_URL ?>public/reports.php">รายงาน</a>
                 </li>
                 <?php endif; ?>

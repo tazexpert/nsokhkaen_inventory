@@ -8,11 +8,6 @@ $pdo = getDbConnection();
 
 use Shuchkin\SimpleXLSX;
 
-$type = $_POST['type'] ?? '';
-if (!in_array($type, ['material', 'asset'], true)) {
-    jsonResponse(['success' => false, 'message' => 'ประเภทข้อมูลไม่ถูกต้อง'], 422);
-}
-
 if (!isset($_FILES['excel_file']) || $_FILES['excel_file']['error'] !== UPLOAD_ERR_OK) {
     jsonResponse(['success' => false, 'message' => 'กรุณาเลือกไฟล์ Excel ที่ต้องการนำเข้า'], 422);
 }
@@ -141,63 +136,28 @@ $skipped = 0;
 
 $pdo->beginTransaction();
 try {
-    if ($type === 'material') {
-        $records = extractMaterialRecords($rows);
+    $records = extractMaterialRecords($rows);
 
-        foreach ($records as $record) {
-            $code = generateNextMaterialCode($pdo, $record['category_code'] ?? null);
-            $qr = generateQrPayload($code);
-            $categoryId = resolveMaterialCategoryId($pdo, $record['category_code'] ?? null);
+    foreach ($records as $record) {
+        $code = generateNextMaterialCode($pdo, $record['category_code'] ?? null);
+        $qr = generateQrPayload($code);
+        $categoryId = resolveMaterialCategoryId($pdo, $record['category_code'] ?? null);
 
-            // category_code only comes from the stocktake-report format;
-            // the other two formats leave it null.
-            $stmt = $pdo->prepare("INSERT INTO materials
-                (material_code, qr_code, name, category_id, category_code, unit, unit_cost,
-                 stock_qty, min_stock, storage_location, note, created_by)
-                VALUES (:code, :qr, :name, :category_id, :category_code, :unit, :unit_cost,
-                 :stock_qty, :min_stock, :location, :note, :created_by)");
-            $stmt->execute([
-                'code' => $code, 'qr' => $qr, 'name' => $record['name'], 'category_id' => $categoryId,
-                'category_code' => $record['category_code'] ?? null,
-                'unit' => $record['unit'], 'unit_cost' => $record['unit_cost'], 'stock_qty' => $record['stock_qty'],
-                'min_stock' => $record['min_stock'], 'location' => $record['storage_location'], 'note' => $record['note'],
-                'created_by' => $_SESSION['user']['id'],
-            ]);
-            $imported++;
-        }
-    } else {
-        $header = array_map(fn($h) => strtolower(trim((string) $h)), $rows[0]);
-        $dataRows = array_slice($rows, 1);
-
-        foreach ($dataRows as $row) {
-            $record = array_combine($header, array_pad($row, count($header), null));
-            $name = trim((string) ($record['name'] ?? ''));
-
-            if ($name === '') {
-                $skipped++;
-                continue;
-            }
-
-            $categoryId = !empty($record['category_id']) ? (int) $record['category_id'] : null;
-            $storageLocation = trim((string) ($record['storage_location'] ?? '')) ?: null;
-            $note = trim((string) ($record['note'] ?? '')) ?: null;
-
-            $code = generateNextCode($pdo, 'assets', 'asset_code', 'AST');
-            $qr = generateQrPayload($code);
-            $brandModel = trim((string) ($record['brand_model'] ?? '')) ?: null;
-            $serial = trim((string) ($record['serial_number'] ?? '')) ?: null;
-            $acquiredDate = trim((string) ($record['acquired_date'] ?? '')) ?: null;
-
-            $stmt = $pdo->prepare("INSERT INTO assets
-                (asset_code, qr_code, name, category_id, brand_model, serial_number, status, storage_location, acquired_date, note, created_by)
-                VALUES (:code, :qr, :name, :category_id, :brand_model, :serial, 'available', :location, :acquired_date, :note, :created_by)");
-            $stmt->execute([
-                'code' => $code, 'qr' => $qr, 'name' => $name, 'category_id' => $categoryId,
-                'brand_model' => $brandModel, 'serial' => $serial, 'location' => $storageLocation,
-                'acquired_date' => $acquiredDate, 'note' => $note, 'created_by' => $_SESSION['user']['id'],
-            ]);
-            $imported++;
-        }
+        // category_code only comes from the stocktake-report format;
+        // the other two formats leave it null.
+        $stmt = $pdo->prepare("INSERT INTO materials
+            (material_code, qr_code, name, category_id, category_code, unit, unit_cost,
+             stock_qty, min_stock, storage_location, note, created_by)
+            VALUES (:code, :qr, :name, :category_id, :category_code, :unit, :unit_cost,
+             :stock_qty, :min_stock, :location, :note, :created_by)");
+        $stmt->execute([
+            'code' => $code, 'qr' => $qr, 'name' => $record['name'], 'category_id' => $categoryId,
+            'category_code' => $record['category_code'] ?? null,
+            'unit' => $record['unit'], 'unit_cost' => $record['unit_cost'], 'stock_qty' => $record['stock_qty'],
+            'min_stock' => $record['min_stock'], 'location' => $record['storage_location'], 'note' => $record['note'],
+            'created_by' => $_SESSION['user']['id'],
+        ]);
+        $imported++;
     }
 
     $pdo->commit();

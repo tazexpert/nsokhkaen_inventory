@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../includes/auth.php';
 requireLogin();
+$currentLoginUser = currentUser();
 
 $pdo = getDbConnection();
 $id = (int) ($_GET['id'] ?? 0);
@@ -19,6 +20,12 @@ $requisition = $stmt->fetch();
 if (!$requisition) {
     http_response_code(404);
     die('ไม่พบใบเบิกที่ร้องขอ');
+}
+
+// Staff only print their own requisitions; admin can print any.
+if ($currentLoginUser['role'] !== 'admin' && (int) $requisition['created_by'] !== (int) $currentLoginUser['id']) {
+    http_response_code(403);
+    die('คุณไม่มีสิทธิ์เข้าถึงใบเบิกนี้');
 }
 
 // ผู้จ่าย (issuer) and the approver signing under "อนุญาติให้เบิกได้" are
@@ -139,7 +146,7 @@ function formatThaiDate(string $datetime): string
     <?php foreach ($items as $i => $item): ?>
         <tr>
             <td class="col-no"><?= $i + 1 ?></td>
-            <td><?= htmlspecialchars($item['item_name']) ?><?= $item['item_type'] === 'asset' ? ' (ครุภัณฑ์)' : '' ?></td>
+            <td><?= htmlspecialchars($item['item_name']) ?></td>
             <td class="col-unit"><?= htmlspecialchars($item['unit'] ?? '-') ?></td>
             <td class="col-qty"><?= (int) $item['quantity_requested'] ?></td>
             <td class="col-qty"><?= (int) $item['quantity_issued'] ?></td>

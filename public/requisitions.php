@@ -1,6 +1,6 @@
 <?php require_once __DIR__ . '/../includes/header.php'; ?>
 
-<h3 class="mb-4">ใบเบิกวัสดุ/ครุภัณฑ์</h3>
+<h3 class="mb-4">ใบเบิกวัสดุ</h3>
 
 <div class="card mb-4">
     <div class="card-body">

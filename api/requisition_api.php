@@ -1,9 +1,8 @@
 <?php
 /**
  * Requisition slips (ใบเบิกวัสดุ) - a single slip groups several materials
- * (withdraw) and/or assets (borrow) scanned in one visit, matching the
- * office's paper form. Every line is still recorded into
- * material_transactions / asset_transactions as before (with a
+ * withdrawn in one visit, matching the office's paper form. Every line is
+ * still recorded into material_transactions as before (with a
  * requisition_id back-reference) so existing reports keep working.
  *
  * The in-progress slip (draft) is kept in the PHP session, not just in
@@ -33,10 +32,6 @@ switch ($action) {
         requireLoginApi();
         cartAddMaterial($pdo);
         break;
-    case 'cart_add_asset':
-        $user = requireLoginApi();
-        cartAddAsset($pdo, $user);
-        break;
     case 'cart_remove':
         requireLoginApi();
         cartRemove();
@@ -51,12 +46,12 @@ switch ($action) {
         createRequisition($pdo, $user);
         break;
     case 'list':
-        requireLoginApi();
-        listRequisitions($pdo);
+        $user = requireLoginApi();
+        listRequisitions($pdo, $user);
         break;
     case 'get':
-        requireLoginApi();
-        getRequisition($pdo);
+        $user = requireLoginApi();
+        getRequisition($pdo, $user);
         break;
     default:
         jsonResponse(['success' => false, 'message' => 'ไม่พบคำสั่งที่ร้องขอ'], 400);
@@ -127,53 +122,6 @@ function cartAddMaterial(PDO $pdo): void
     jsonResponse(['success' => true, 'data' => $draft]);
 }
 
-// $user is whoever is logged in (via a full login or a PIN - see
-// includes/auth.php/public/scan_login.php) and becomes the borrower on
-// record for every asset added to the cart, with no PIN needed per item.
-function cartAddAsset(PDO $pdo, array $user): void
-{
-    $assetId = (int) ($_POST['asset_id'] ?? 0);
-    $note = sanitizeString($_POST['note'] ?? '');
-
-    if (!$assetId) {
-        jsonResponse(['success' => false, 'message' => 'ข้อมูลไม่ถูกต้อง'], 422);
-    }
-
-    $stmt = $pdo->prepare('SELECT * FROM assets WHERE id = :id');
-    $stmt->execute(['id' => $assetId]);
-    $asset = $stmt->fetch();
-    if (!$asset) {
-        jsonResponse(['success' => false, 'message' => 'ไม่พบข้อมูลครุภัณฑ์'], 404);
-    }
-    if ($asset['status'] !== 'available') {
-        jsonResponse(['success' => false, 'message' => "\"{$asset['name']}\" ไม่สามารถยืมได้ในขณะนี้ (สถานะ: {$asset['status']})"], 422);
-    }
-
-    saveDraftMeta();
-    $draft = getDraft();
-
-    foreach ($draft['items'] as $item) {
-        if ($item['item_type'] === 'asset' && $item['id'] === $assetId) {
-            jsonResponse(['success' => false, 'message' => "\"{$asset['name']}\" อยู่ในใบเบิกนี้แล้ว"], 422);
-        }
-    }
-
-    $draft['items'][] = [
-        'item_type' => 'asset',
-        'id' => $assetId,
-        'name' => $asset['name'],
-        'unit' => null,
-        'quantity' => 1,
-        'note' => $note,
-        'image_path' => $asset['image_path'],
-        'borrower_name' => $user['full_name'],
-        'display' => 'ยืมโดย ' . $user['full_name'],
-    ];
-    $_SESSION['requisition_draft'] = $draft;
-
-    jsonResponse(['success' => true, 'data' => $draft]);
-}
-
 function cartRemove(): void
 {
     $index = (int) ($_POST['index'] ?? -1);
@@ -218,109 +166,62 @@ function createRequisition(PDO $pdo, array $user): void
         $requisitionId = (int) $pdo->lastInsertId();
 
         $insertItem = $pdo->prepare('INSERT INTO requisition_items
-            (requisition_id, item_type, material_id, asset_id, item_name, unit, quantity_requested, quantity_issued, note)
-            VALUES (:requisition_id, :item_type, :material_id, :asset_id, :item_name, :unit, :qty_requested, :qty_issued, :note)');
+            (requisition_id, item_type, material_id, item_name, unit, quantity_requested, quantity_issued, note)
+            VALUES (:requisition_id, :item_type, :material_id, :item_name, :unit, :qty_requested, :qty_issued, :note)');
 
         $insertMaterialTx = $pdo->prepare("INSERT INTO material_transactions
             (material_id, user_id, requisition_id, transaction_type, quantity, balance_after, note)
             VALUES (:material_id, :user_id, :requisition_id, 'withdraw', :quantity, :balance_after, :note)");
 
-        $insertAssetTx = $pdo->prepare("INSERT INTO asset_transactions
-            (asset_id, user_id, requisition_id, action, borrower_name, note)
-            VALUES (:asset_id, :user_id, :requisition_id, 'borrow', :borrower_name, :note)");
-
         foreach ($items as $item) {
             $itemType = $item['item_type'] ?? '';
             $note = sanitizeString($item['note'] ?? '');
 
-            if ($itemType === 'material') {
-                $materialId = (int) ($item['id'] ?? 0);
-                $quantity = (int) ($item['quantity'] ?? 0);
-
-                if (!$materialId || $quantity <= 0) {
-                    throw new InvalidArgumentException('ข้อมูลวัสดุในรายการไม่ถูกต้อง');
-                }
-
-                $stmt = $pdo->prepare('SELECT * FROM materials WHERE id = :id FOR UPDATE');
-                $stmt->execute(['id' => $materialId]);
-                $material = $stmt->fetch();
-
-                if (!$material) {
-                    throw new InvalidArgumentException('ไม่พบข้อมูลวัสดุรายการหนึ่งในใบเบิก');
-                }
-                if ($material['stock_qty'] < $quantity) {
-                    throw new InvalidArgumentException("สต๊อก \"{$material['name']}\" คงเหลือไม่เพียงพอ (คงเหลือ {$material['stock_qty']} {$material['unit']})");
-                }
-
-                $newBalance = $material['stock_qty'] - $quantity;
-                $pdo->prepare('UPDATE materials SET stock_qty = :qty WHERE id = :id')
-                    ->execute(['qty' => $newBalance, 'id' => $materialId]);
-
-                $insertMaterialTx->execute([
-                    'material_id' => $materialId,
-                    'user_id' => $user['id'],
-                    'requisition_id' => $requisitionId,
-                    'quantity' => $quantity,
-                    'balance_after' => $newBalance,
-                    'note' => $note ?: null,
-                ]);
-
-                $insertItem->execute([
-                    'requisition_id' => $requisitionId,
-                    'item_type' => 'material',
-                    'material_id' => $materialId,
-                    'asset_id' => null,
-                    'item_name' => $material['name'],
-                    'unit' => $material['unit'],
-                    'qty_requested' => $quantity,
-                    'qty_issued' => $quantity,
-                    'note' => $note ?: null,
-                ]);
-            } elseif ($itemType === 'asset') {
-                $assetId = (int) ($item['id'] ?? 0);
-                if (!$assetId) {
-                    throw new InvalidArgumentException('ข้อมูลครุภัณฑ์ในรายการไม่ถูกต้อง');
-                }
-
-                $stmt = $pdo->prepare('SELECT * FROM assets WHERE id = :id FOR UPDATE');
-                $stmt->execute(['id' => $assetId]);
-                $asset = $stmt->fetch();
-
-                if (!$asset) {
-                    throw new InvalidArgumentException('ไม่พบข้อมูลครุภัณฑ์รายการหนึ่งในใบเบิก');
-                }
-                if ($asset['status'] !== 'available') {
-                    throw new InvalidArgumentException("\"{$asset['name']}\" ไม่สามารถยืมได้ในขณะนี้ (สถานะ: {$asset['status']})");
-                }
-
-                $pdo->prepare("UPDATE assets SET status = 'borrowed' WHERE id = :id")->execute(['id' => $assetId]);
-
-                $assetBorrowerName = sanitizeString($item['borrower_name'] ?? '') ?: $requesterName;
-
-                $insertAssetTx->execute([
-                    'asset_id' => $assetId,
-                    'user_id' => $user['id'],
-                    'requisition_id' => $requisitionId,
-                    'borrower_name' => $assetBorrowerName ?: null,
-                    'note' => $note ?: null,
-                ]);
-
-                $itemNote = 'ผู้ยืม: ' . $assetBorrowerName . ($note !== '' ? " - {$note}" : '');
-
-                $insertItem->execute([
-                    'requisition_id' => $requisitionId,
-                    'item_type' => 'asset',
-                    'material_id' => null,
-                    'asset_id' => $assetId,
-                    'item_name' => $asset['name'],
-                    'unit' => null,
-                    'qty_requested' => 1,
-                    'qty_issued' => 1,
-                    'note' => $itemNote,
-                ]);
-            } else {
+            if ($itemType !== 'material') {
                 throw new InvalidArgumentException('ประเภทรายการไม่ถูกต้อง');
             }
+
+            $materialId = (int) ($item['id'] ?? 0);
+            $quantity = (int) ($item['quantity'] ?? 0);
+
+            if (!$materialId || $quantity <= 0) {
+                throw new InvalidArgumentException('ข้อมูลวัสดุในรายการไม่ถูกต้อง');
+            }
+
+            $stmt = $pdo->prepare('SELECT * FROM materials WHERE id = :id FOR UPDATE');
+            $stmt->execute(['id' => $materialId]);
+            $material = $stmt->fetch();
+
+            if (!$material) {
+                throw new InvalidArgumentException('ไม่พบข้อมูลวัสดุรายการหนึ่งในใบเบิก');
+            }
+            if ($material['stock_qty'] < $quantity) {
+                throw new InvalidArgumentException("สต๊อก \"{$material['name']}\" คงเหลือไม่เพียงพอ (คงเหลือ {$material['stock_qty']} {$material['unit']})");
+            }
+
+            $newBalance = $material['stock_qty'] - $quantity;
+            $pdo->prepare('UPDATE materials SET stock_qty = :qty WHERE id = :id')
+                ->execute(['qty' => $newBalance, 'id' => $materialId]);
+
+            $insertMaterialTx->execute([
+                'material_id' => $materialId,
+                'user_id' => $user['id'],
+                'requisition_id' => $requisitionId,
+                'quantity' => $quantity,
+                'balance_after' => $newBalance,
+                'note' => $note ?: null,
+            ]);
+
+            $insertItem->execute([
+                'requisition_id' => $requisitionId,
+                'item_type' => 'material',
+                'material_id' => $materialId,
+                'item_name' => $material['name'],
+                'unit' => $material['unit'],
+                'qty_requested' => $quantity,
+                'qty_issued' => $quantity,
+                'note' => $note ?: null,
+            ]);
         }
 
         $pdo->commit();
@@ -345,7 +246,9 @@ function createRequisition(PDO $pdo, array $user): void
     }
 }
 
-function listRequisitions(PDO $pdo): void
+// Staff only ever see their own requisitions (the ones they personally
+// created/submitted); admin sees everything.
+function listRequisitions(PDO $pdo, array $user): void
 {
     $keyword = sanitizeString($_GET['keyword'] ?? '');
     $startDate = sanitizeString($_GET['start_date'] ?? '');
@@ -357,6 +260,11 @@ function listRequisitions(PDO $pdo): void
             JOIN users u ON u.id = r.created_by
             WHERE 1=1";
     $params = [];
+
+    if ($user['role'] !== 'admin') {
+        $sql .= ' AND r.created_by = :uid';
+        $params['uid'] = $user['id'];
+    }
 
     if ($keyword !== '') {
         $sql .= ' AND (r.requisition_no LIKE :kw1 OR r.requester_name LIKE :kw2 OR r.purpose LIKE :kw3)';
@@ -380,7 +288,7 @@ function listRequisitions(PDO $pdo): void
     jsonResponse(['success' => true, 'data' => $stmt->fetchAll()]);
 }
 
-function getRequisition(PDO $pdo): void
+function getRequisition(PDO $pdo, array $user): void
 {
     $id = (int) ($_GET['id'] ?? 0);
 
@@ -391,6 +299,10 @@ function getRequisition(PDO $pdo): void
 
     if (!$requisition) {
         jsonResponse(['success' => false, 'message' => 'ไม่พบใบเบิก'], 404);
+    }
+
+    if ($user['role'] !== 'admin' && (int) $requisition['created_by'] !== (int) $user['id']) {
+        jsonResponse(['success' => false, 'message' => 'คุณไม่มีสิทธิ์เข้าถึงใบเบิกนี้'], 403);
     }
 
     $itemsStmt = $pdo->prepare('SELECT * FROM requisition_items WHERE requisition_id = :id ORDER BY id');
