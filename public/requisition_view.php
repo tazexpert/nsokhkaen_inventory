@@ -46,7 +46,7 @@ $items = $itemsStmt->fetchAll();
             </div>
             <div class="col-md-3">
                 <div class="text-muted small">วันที่</div>
-                <div><?= htmlspecialchars($requisition['created_at']) ?></div>
+                <div><?= htmlspecialchars(formatThaiDateTime($requisition['created_at'])) ?></div>
             </div>
             <div class="col-md-3">
                 <div class="text-muted small">ผู้เบิก</div>

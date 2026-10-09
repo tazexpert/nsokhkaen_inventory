@@ -56,7 +56,7 @@ function dashboardCard(string $colorClass, int $value, string $label, string $hr
                     <td><a href="<?= BASE_URL ?>public/requisition_view.php?id=<?= (int) $req['id'] ?>"><?= htmlspecialchars($req['requisition_no']) ?></a></td>
                     <td><?= htmlspecialchars($req['requester_name'] ?: '-') ?></td>
                     <td><?= (int) $req['item_count'] ?></td>
-                    <td><?= htmlspecialchars($req['created_at']) ?></td>
+                    <td><?= htmlspecialchars(formatThaiDateTime($req['created_at'])) ?></td>
                     <td>
                         <a href="<?= BASE_URL ?>public/requisition_print.php?id=<?= (int) $req['id'] ?>" target="_blank" class="btn btn-sm btn-outline-secondary">พิมพ์</a>
                     </td>

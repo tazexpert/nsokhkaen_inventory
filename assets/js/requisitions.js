@@ -16,7 +16,7 @@ function loadRequisitions() {
             tbody.append(`
                 <tr>
                     <td><a href="${REQ_VIEW_URL}?id=${r.id}">${r.requisition_no}</a></td>
-                    <td>${r.created_at}</td>
+                    <td>${formatThaiDateTime(r.created_at)}</td>
                     <td>${r.requester_name || '-'}</td>
                     <td>${r.purpose || '-'}</td>
                     <td>${r.item_count}</td>

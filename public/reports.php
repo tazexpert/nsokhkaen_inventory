@@ -78,10 +78,11 @@ requireAdmin();
         align-items: flex-end;
         gap: 6px;
         height: 220px;
+        box-sizing: border-box;
+        padding: 24px 8px 0; /* top padding reserves room for the tallest bar's value label */
         margin-bottom: 70px;
         border-left: 1px solid #999;
         border-bottom: 1px solid #999;
-        padding: 0 8px;
     }
     .bar-col {
         flex: 1 1 0;
@@ -93,18 +94,27 @@ requireAdmin();
         height: 100%;
         position: relative;
     }
-    .bar-value {
-        font-size: 11px;
-        color: #333;
-        position: absolute;
-        top: -16px;
-        white-space: nowrap;
-    }
     .bar {
         width: 100%;
         max-width: 24px;
         background: #2a78d6;
         border-radius: 4px 4px 0 0;
+        position: relative;
+        /* Chrome drops background-color by default when printing unless
+           told otherwise - without this the bars (plain color fills, no
+           border) render as blank space on the printed page. */
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    .bar-value {
+        font-size: 11px;
+        color: #333;
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        white-space: nowrap;
+        margin-bottom: 2px;
     }
     .bar-label {
         position: absolute;
@@ -155,14 +165,19 @@ function loadReport() {
     });
 }
 
+function isoToThaiDate(iso) {
+    const [y, m, d] = iso.split('-').map((n) => parseInt(n, 10));
+    return `${d} ${THAI_MONTHS[m - 1]} ${y + 543}`;
+}
+
 function renderRangeText(filters) {
     const start = filters.start_date || null;
     const end = filters.end_date || null;
     let text = 'ทุกช่วงเวลา';
-    if (start && end) text = `ช่วงวันที่ ${start} ถึง ${end}`;
-    else if (start) text = `ตั้งแต่วันที่ ${start}`;
-    else if (end) text = `ถึงวันที่ ${end}`;
-    $('#reportRangeText').text(text + ' — พิมพ์เมื่อ ' + new Date().toLocaleDateString('th-TH'));
+    if (start && end) text = `ช่วงวันที่ ${isoToThaiDate(start)} ถึง ${isoToThaiDate(end)}`;
+    else if (start) text = `ตั้งแต่วันที่ ${isoToThaiDate(start)}`;
+    else if (end) text = `ถึงวันที่ ${isoToThaiDate(end)}`;
+    $('#reportRangeText').text(text + ' — พิมพ์เมื่อ ' + isoToThaiDate(new Date().toISOString().slice(0, 10)));
 }
 
 function renderChart(items) {
@@ -172,13 +187,15 @@ function renderChart(items) {
         return;
     }
     $('#chartEmpty').hide();
+    const chartHeight = 196; // chart-bars content height = 220px - 24px top padding
     const max = Math.max(...items.map((i) => i.qty));
     items.forEach((item) => {
-        const pct = max > 0 ? (item.qty / max) * 100 : 0;
+        const px = max > 0 ? Math.round((item.qty / max) * chartHeight) : 0;
         const col = $(`
             <div class="bar-col" title="${item.name}: ${item.qty} ${item.unit}">
-                <div class="bar-value">${item.qty}</div>
-                <div class="bar" style="height:${pct}%"></div>
+                <div class="bar" style="height:${px}px">
+                    <div class="bar-value">${item.qty}</div>
+                </div>
                 <div class="bar-label">${item.name}</div>
             </div>
         `);
@@ -226,5 +243,8 @@ function renderLowStock(lowStock) {
 $(document).ready(loadReport);
 </script>
 
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/th.js"></script>
 <script src="<?= BASE_URL ?>assets/js/thai-date-select.js<?= assetVersion('assets/js/thai-date-select.js') ?>"></script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

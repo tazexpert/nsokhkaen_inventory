@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/functions.php';
 requireLogin();
 $currentLoginUser = currentUser();
 
@@ -59,13 +60,6 @@ function signatureLine(?string $name, int $dots = 43): string
     return $name !== '' ? htmlspecialchars($name) : str_repeat('.', $dots);
 }
 
-function formatThaiDate(string $datetime): string
-{
-    $months = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-        'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
-    $ts = strtotime($datetime);
-    return (int) date('j', $ts) . ' ' . $months[(int) date('n', $ts)] . ' ' . ((int) date('Y', $ts) + 543);
-}
 ?>
 <!DOCTYPE html>
 <html lang="th">

@@ -183,6 +183,24 @@ function findUserByPin(PDO $pdo, string $pin, ?int $excludeId = null): ?array
     return null;
 }
 
+// Thai month names ("9 ตุลาคม 2569" / "9 ตุลาคม 2569 14:23 น.") used wherever
+// a date needs to read in Thai convention (พ.ศ. year) instead of the raw SQL
+// datetime string - printed documents, the dashboard's recent-requisitions
+// table, the ใบเบิก list.
+function formatThaiDate(string $datetime): string
+{
+    $months = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+        'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+    $ts = strtotime($datetime);
+    return (int) date('j', $ts) . ' ' . $months[(int) date('n', $ts)] . ' ' . ((int) date('Y', $ts) + 543);
+}
+
+function formatThaiDateTime(string $datetime): string
+{
+    $ts = strtotime($datetime);
+    return formatThaiDate($datetime) . ' ' . date('H:i', $ts) . ' น.';
+}
+
 // The actual content encoded into the printed QR image: a direct link to the
 // scan page. Any phone camera app can open this - it does not need our own
 // in-page scanner. If the user is not logged in, scan.php requires login
@@ -192,40 +210,19 @@ function buildQrScanUrl(string $qrCode): string
     return APP_URL . 'public/scan.php?qr=' . urlencode($qrCode);
 }
 
-// Day/month(Thai name)/year(พ.ศ.) dropdown triple used anywhere a date-range
-// filter is needed (ใบเบิก, รายงาน) instead of the native <input type="date">,
-// whose displayed field order depends on the browser/OS locale and isn't
-// reliably วัน-เดือน-ปี. assets/js/thai-date-select.js reads/writes these
-// three <select> elements (ids: {$prefix}_day/_month/_year) as one ISO date.
+// Click-to-pick date field used anywhere a date-range filter is needed
+// (ใบเบิก, รายงาน) instead of the native <input type="date">, whose
+// displayed field order depends on the browser/OS locale and isn't
+// reliably วัน-เดือน-ปี, and instead of a day/month/year dropdown triple
+// (too many clicks). assets/js/thai-date-select.js turns this input into a
+// flatpickr calendar popup: the visible text always reads "9 ตุลาคม 2569"
+// (Thai month name, พ.ศ. year) while the field's own .val() stays the
+// underlying ISO date (Y-m-d) that the API filters expect - see
+// thaiDateSelectGet()/Set() in that file.
 function renderThaiDateSelect(string $prefix): void
 {
-    $months = [
-        1 => 'มกราคม', 2 => 'กุมภาพันธ์', 3 => 'มีนาคม', 4 => 'เมษายน',
-        5 => 'พฤษภาคม', 6 => 'มิถุนายน', 7 => 'กรกฎาคม', 8 => 'สิงหาคม',
-        9 => 'กันยายน', 10 => 'ตุลาคม', 11 => 'พฤศจิกายน', 12 => 'ธันวาคม',
-    ];
-    $currentBuddhistYear = (int) date('Y') + 543;
     ?>
-    <div class="input-group">
-        <select class="form-select" id="<?= $prefix ?>_day">
-            <option value="">วัน</option>
-            <?php for ($d = 1; $d <= 31; $d++): ?>
-                <option value="<?= $d ?>"><?= $d ?></option>
-            <?php endfor; ?>
-        </select>
-        <select class="form-select" id="<?= $prefix ?>_month">
-            <option value="">เดือน</option>
-            <?php foreach ($months as $num => $name): ?>
-                <option value="<?= $num ?>"><?= $name ?></option>
-            <?php endforeach; ?>
-        </select>
-        <select class="form-select" id="<?= $prefix ?>_year">
-            <option value="">ปี</option>
-            <?php for ($y = $currentBuddhistYear; $y >= $currentBuddhistYear - 10; $y--): ?>
-                <option value="<?= $y ?>"><?= $y ?></option>
-            <?php endfor; ?>
-        </select>
-    </div>
+    <input type="text" class="form-control thai-datepicker" id="<?= $prefix ?>" placeholder="เลือกวันที่" autocomplete="off" readonly>
     <?php
 }
 
