@@ -33,7 +33,7 @@ requireAdmin();
         <div class="small text-muted" id="reportRangeText"></div>
     </div>
 
-    <div class="card mb-4 report-section">
+    <div class="card mb-4 report-section" id="chartSection">
         <div class="card-header">1. กราฟจำนวนการเบิกวัสดุ</div>
         <div class="card-body">
             <div class="chart-bars" id="chartBars"></div>
@@ -41,7 +41,7 @@ requireAdmin();
         </div>
     </div>
 
-    <div class="card mb-4 report-section">
+    <div class="card mb-4 report-section" id="valueSection">
         <div class="card-header">2. มูลค่าวัสดุที่เบิก</div>
         <div class="card-body p-0">
             <table class="table table-sm mb-0" id="valueTable">
@@ -73,14 +73,29 @@ requireAdmin();
 </div>
 
 <style>
+    /* Embeds the font file from this server instead of relying on it being
+       installed locally or on an external CDN - see
+       public/requisition_print.php for why. Applied to the printed report
+       only (see @media print below) - the on-screen page keeps the normal
+       Bootstrap font to match the rest of the app's UI. */
+    @font-face {
+        font-family: 'TH Sarabun New';
+        src: url('<?= BASE_URL ?>assets/fonts/THSarabunNew.ttf') format('truetype');
+        font-weight: normal; font-style: normal;
+    }
+    @font-face {
+        font-family: 'TH Sarabun New';
+        src: url('<?= BASE_URL ?>assets/fonts/THSarabunNew-Bold.ttf') format('truetype');
+        font-weight: bold; font-style: normal;
+    }
     .chart-bars {
         display: flex;
         align-items: flex-end;
         gap: 6px;
-        height: 220px;
+        height: 360px;
         box-sizing: border-box;
-        padding: 24px 8px 0; /* top padding reserves room for the tallest bar's value label */
-        margin-bottom: 70px;
+        padding: 28px 8px 0; /* top padding reserves room for the tallest bar's value label */
+        margin-bottom: 90px;
         border-left: 1px solid #999;
         border-bottom: 1px solid #999;
     }
@@ -96,7 +111,7 @@ requireAdmin();
     }
     .bar {
         width: 100%;
-        max-width: 24px;
+        max-width: 32px;
         background: #2a78d6;
         border-radius: 4px 4px 0 0;
         position: relative;
@@ -132,12 +147,32 @@ requireAdmin();
     }
     @media print {
         @page { size: A4 portrait; margin: 12mm; }
+        /* Section 1 (the chart) prints on its own landscape page - a lot
+           more horizontal room for however many materials were withdrawn -
+           while sections 2/3 stay on normal portrait pages. */
+        @page chart-page { size: A4 landscape; margin: 12mm; }
         nav, footer, .no-print { display: none !important; }
+        body, #reportSheet { font-family: 'TH Sarabun New', 'Tahoma', sans-serif; }
         .container-fluid { padding: 0 !important; }
         .report-section { page-break-inside: avoid; border: none !important; }
         .card-header { background: none !important; border-bottom: 1px solid #000 !important; font-weight: bold; }
         #valueTable, #lowStockTable { page-break-inside: auto; }
         #valueTable tr, #lowStockTable tr { page-break-inside: avoid; }
+
+        #chartSection {
+            page: chart-page;
+            break-after: page;
+            display: flex;
+            flex-direction: column;
+            height: calc(210mm - 24mm); /* landscape page height minus @page margins */
+            overflow: hidden; /* clips the rotated bar labels so they can't bleed onto the next printed page */
+        }
+        #chartSection .card-body { flex: 1; display: flex; flex-direction: column; }
+        #valueSection { break-after: page; }
+        .chart-bars { flex: 1; height: auto; margin-bottom: 60px; }
+        .bar { max-width: 40px; }
+        .bar-value { font-size: 13px; }
+        .bar-label { font-size: 12px; max-width: 140px; }
     }
 </style>
 
@@ -187,13 +222,15 @@ function renderChart(items) {
         return;
     }
     $('#chartEmpty').hide();
-    const chartHeight = 196; // chart-bars content height = 220px - 24px top padding
+    // Percentage of .bar-col's own height (not a fixed px figure) so the
+    // same markup auto-scales whether .chart-bars is sized for the screen
+    // or stretched to fill the landscape print page (see @media print).
     const max = Math.max(...items.map((i) => i.qty));
     items.forEach((item) => {
-        const px = max > 0 ? Math.round((item.qty / max) * chartHeight) : 0;
+        const pct = max > 0 ? (item.qty / max) * 100 : 0;
         const col = $(`
             <div class="bar-col" title="${item.name}: ${item.qty} ${item.unit}">
-                <div class="bar" style="height:${px}px">
+                <div class="bar" style="height:${pct}%">
                     <div class="bar-value">${item.qty}</div>
                 </div>
                 <div class="bar-label">${item.name}</div>
@@ -241,6 +278,17 @@ function renderLowStock(lowStock) {
 }
 
 $(document).ready(loadReport);
+
+// @font-face files referenced only inside @media print are fetched lazily -
+// not until the browser actually paints print output. If the user clicks
+// "พิมพ์รายงาน" before that fetch finishes, the print output can render
+// blank (observed in testing). Forcing the font to load as soon as the page
+// is ready avoids that race, while the on-screen page still shows the
+// normal Bootstrap font since font-family stays scoped to @media print.
+if (document.fonts) {
+    document.fonts.load("400 16px 'TH Sarabun New'");
+    document.fonts.load("700 16px 'TH Sarabun New'");
+}
 </script>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
