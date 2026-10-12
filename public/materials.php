@@ -109,9 +109,12 @@ $materialCategories = $pdo->query("SELECT * FROM categories WHERE item_type = 'm
                     </div>
                     <div class="mb-3">
                         <label class="form-label">รูปภาพ</label>
-                        <div class="mb-2"><img id="m_image_preview" src="" alt="" style="max-height:120px; display:none;" class="border rounded"></div>
+                        <div class="mb-2">
+                            <img id="m_image_preview" src="" alt="" style="max-height:120px; display:none;" class="border rounded">
+                            <div><a href="#" id="m_image_recrop" style="display:none;" onclick="reopenCrop(); return false;">ครอปรูปนี้ใหม่</a></div>
+                        </div>
                         <input type="file" class="form-control" id="m_image" accept="image/*">
-                        <div class="form-text">JPG, PNG, WEBP หรือ GIF ขนาดไม่เกิน 5MB</div>
+                        <div class="form-text">JPG, PNG, WEBP หรือ GIF ขนาดไม่เกิน 5MB - เลือกไฟล์แล้วจะเปิดหน้าต่างให้ครอปเฉพาะส่วนที่ต้องการก่อนบันทึก</div>
                     </div>
                 </form>
             </div>
@@ -122,6 +125,30 @@ $materialCategories = $pdo->query("SELECT * FROM categories WHERE item_type = 'm
         </div>
     </div>
 </div>
+
+<!-- Crop modal - opens automatically when a new image file is chosen above -->
+<div class="modal fade" id="cropModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">ครอปรูปภาพ - เลือกเฉพาะส่วนที่ต้องการ</h5>
+                <button type="button" class="btn-close" onclick="cancelCrop()"></button>
+            </div>
+            <div class="modal-body">
+                <div style="max-height:60vh; overflow:hidden;">
+                    <img id="cropImage" src="" alt="" style="max-width:100%;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="cancelCrop()">ยกเลิก</button>
+                <button class="btn btn-primary" onclick="confirmCrop()"><i class="bi bi-crop"></i> ใช้ส่วนที่ครอปนี้</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css">
+<script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
 
 <!-- Receive stock modal -->
 <div class="modal fade" id="receiveStockModal" tabindex="-1">

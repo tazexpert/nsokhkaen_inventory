@@ -71,14 +71,108 @@ function loadMaterials(keyword = '') {
     });
 }
 
+// Cropping state for the material image field. croppedImageBlob (not the
+// raw <input type=file> contents) is what actually gets uploaded in
+// saveMaterial() below - see the change handler further down for why.
+let cropper = null;
+let croppedImageBlob = null;
+let originalImageDataUrl = null; // lets "ครอปรูปนี้ใหม่" re-open the crop tool on the ORIGINAL image, not an already-cropped one
+let preCropPreviewState = null; // { src, visible, blob } snapshot to restore to if the crop dialog is cancelled
+
 function resetMaterialForm() {
     $('#materialForm')[0].reset();
     $('#m_id').val('');
     $('#m_category_code').val('');
     $('#m_image_preview').attr('src', '').hide();
+    $('#m_image_recrop').hide();
     $('#m_stock_qty_label').text('จำนวนคงเหลือเริ่มต้น');
     $('#materialModalTitle').text('เพิ่มวัสดุ');
+    croppedImageBlob = null;
+    originalImageDataUrl = null;
 }
+
+function openCropModal() {
+    $('#cropImage').attr('src', originalImageDataUrl);
+    const modalEl = document.getElementById('cropModal');
+    new bootstrap.Modal(modalEl).show();
+    // Cropper.js needs the <img> laid out at its final size to measure
+    // correctly - 'shown.bs.modal' fires after the modal's CSS transition
+    // finishes, unlike a plain .show() callback.
+    $(modalEl).one('shown.bs.modal', function () {
+        if (cropper) {
+            cropper.destroy();
+        }
+        cropper = new Cropper(document.getElementById('cropImage'), {
+            aspectRatio: NaN,
+            viewMode: 1,
+            autoCropArea: 1,
+        });
+    });
+}
+
+function closeCropModal() {
+    bootstrap.Modal.getInstance(document.getElementById('cropModal'))?.hide();
+    if (cropper) {
+        cropper.destroy();
+        cropper = null;
+    }
+}
+
+function confirmCrop() {
+    if (!cropper) {
+        return;
+    }
+    const canvas = cropper.getCroppedCanvas({ maxWidth: 1600, maxHeight: 1600 });
+    canvas.toBlob((blob) => {
+        croppedImageBlob = blob;
+        $('#m_image_preview').attr('src', canvas.toDataURL('image/jpeg', 0.92)).show();
+        $('#m_image_recrop').show();
+        closeCropModal();
+    }, 'image/jpeg', 0.92);
+}
+
+function cancelCrop() {
+    closeCropModal();
+    // No image was actually chosen as far as the form is concerned - put
+    // everything back exactly as it was before this file was picked, and
+    // clear the raw <input> so re-picking the same file still fires 'change'.
+    $('#m_image').val('');
+    if (preCropPreviewState) {
+        $('#m_image_preview').attr('src', preCropPreviewState.src).toggle(preCropPreviewState.visible);
+        $('#m_image_recrop').toggle(!!preCropPreviewState.blob);
+        croppedImageBlob = preCropPreviewState.blob;
+    } else {
+        $('#m_image_preview').attr('src', '').hide();
+        $('#m_image_recrop').hide();
+        croppedImageBlob = null;
+    }
+    originalImageDataUrl = null;
+}
+
+function reopenCrop() {
+    if (!originalImageDataUrl) {
+        return;
+    }
+    openCropModal();
+}
+
+$('#m_image').on('change', function () {
+    const file = this.files[0];
+    if (!file) {
+        return;
+    }
+    preCropPreviewState = {
+        src: $('#m_image_preview').attr('src') || '',
+        visible: $('#m_image_preview').is(':visible'),
+        blob: croppedImageBlob,
+    };
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        originalImageDataUrl = e.target.result;
+        openCropModal();
+    };
+    reader.readAsDataURL(file);
+});
 
 function editMaterial(id) {
     $.get(API, { action: 'get', id }, function (res) {
@@ -93,6 +187,9 @@ function editMaterial(id) {
         ensureSelectOption('#m_storage_location', m.storage_location);
         $('#m_note').val(m.note);
         $('#m_category_code').val(m.category_code || '');
+        croppedImageBlob = null;
+        originalImageDataUrl = null;
+        $('#m_image_recrop').hide();
         if (m.image_path) {
             $('#m_image_preview').attr('src', imageUrl(m.image_path)).show();
         } else {
@@ -116,9 +213,11 @@ function saveMaterial() {
     formData.append('storage_location', $('#m_storage_location').val());
     formData.append('note', $('#m_note').val());
     formData.append('category_code', $('#m_category_code').val());
-    const imageFile = $('#m_image')[0].files[0];
-    if (imageFile) {
-        formData.append('image', imageFile);
+    // Uploads the CROPPED result, not the raw file the <input> holds - see
+    // the #m_image change handler above, which opens the crop dialog and
+    // only ever sets croppedImageBlob once the admin confirms a crop.
+    if (croppedImageBlob) {
+        formData.append('image', croppedImageBlob, 'crop.jpg');
     }
 
     $.ajax({
