@@ -28,6 +28,7 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/th.js"></script>
 <script src="<?= BASE_URL ?>assets/js/thai-date-select.js<?= assetVersion('assets/js/thai-date-select.js') ?>"></script>
+<script>const IS_ADMIN_JS = <?= isAdmin() ? 'true' : 'false' ?>;</script>
 
 <div class="table-responsive">
 <table class="table table-striped align-middle" id="requisitionsTable">

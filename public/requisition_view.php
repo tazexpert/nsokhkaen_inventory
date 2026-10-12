@@ -34,6 +34,11 @@ $items = $itemsStmt->fetchAll();
     <div>
         <a href="<?= BASE_URL ?>public/requisitions.php" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> กลับไปหน้ารายการใบเบิก</a>
         <a href="<?= BASE_URL ?>public/requisition_print.php?id=<?= (int) $requisition['id'] ?>" target="_blank" class="btn btn-primary"><i class="bi bi-printer"></i> พิมพ์ใบเบิก</a>
+        <?php if (isAdmin()): ?>
+            <button type="button" class="btn btn-outline-danger" onclick="cancelRequisitionView(<?= (int) $requisition['id'] ?>, '<?= htmlspecialchars($requisition['requisition_no'], ENT_QUOTES) ?>')">
+                <i class="bi bi-x-circle"></i> ยกเลิกใบเบิก
+            </button>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -93,4 +98,25 @@ $items = $itemsStmt->fetchAll();
     </table>
 </div>
 
+<?php if (isAdmin()): ?>
+<script>
+// Same destructive action as the "ยกเลิก" button on the ใบเบิก list page
+// (assets/js/requisitions.js) - deletes the requisition and restores stock -
+// just redirects back to the list afterwards since this requisition won't
+// exist anymore for this page to show.
+function cancelRequisitionView(id, requisitionNo) {
+    if (!confirm(`ยืนยันยกเลิกใบเบิกเลขที่ ${requisitionNo}?\n\nระบบจะลบใบเบิกนี้ออกอย่างถาวร และคืนจำนวนวัสดุที่เบิกไปทั้งหมดกลับเข้าสต๊อก ไม่สามารถย้อนกลับได้`)) {
+        return;
+    }
+    $.post(BASE_URL_JS + 'api/requisition_api.php', { action: 'cancel', id }, function (res) {
+        alert(res.message);
+        if (res.success) {
+            window.location.href = BASE_URL_JS + 'public/requisitions.php';
+        }
+    }, 'json').fail(function (xhr) {
+        alert((xhr.responseJSON && xhr.responseJSON.message) || 'เกิดข้อผิดพลาดในการยกเลิกใบเบิก');
+    });
+}
+</script>
+<?php endif; ?>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

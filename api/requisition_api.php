@@ -53,6 +53,10 @@ switch ($action) {
         $user = requireLoginApi();
         getRequisition($pdo, $user);
         break;
+    case 'cancel':
+        $user = requireAdminApi();
+        cancelRequisition($pdo, $user);
+        break;
     default:
         jsonResponse(['success' => false, 'message' => 'ไม่พบคำสั่งที่ร้องขอ'], 400);
 }
@@ -246,6 +250,63 @@ function createRequisition(PDO $pdo, array $user): void
             $pdo->rollBack();
         }
         jsonResponse(['success' => false, 'message' => 'เกิดข้อผิดพลาดในการบันทึกใบเบิก'], 500);
+    }
+}
+
+// Admin only. Cancelling a requisition fully deletes it (and its line
+// items, via ON DELETE CASCADE) and restores every withdrawn quantity back
+// to materials.stock_qty - there's no "cancelled" status to keep around,
+// this is meant to undo a requisition as if it never happened. The
+// original 'withdraw' material_transactions rows are deleted too (not just
+// left with requisition_id nulled out), otherwise reports.php would still
+// count a cancelled requisition's quantities as withdrawn even though the
+// stock was given back.
+function cancelRequisition(PDO $pdo, array $user): void
+{
+    $id = (int) ($_POST['id'] ?? 0);
+
+    $stmt = $pdo->prepare('SELECT * FROM requisitions WHERE id = :id');
+    $stmt->execute(['id' => $id]);
+    $requisition = $stmt->fetch();
+
+    if (!$requisition) {
+        jsonResponse(['success' => false, 'message' => 'ไม่พบใบเบิก'], 404);
+    }
+
+    try {
+        $pdo->beginTransaction();
+
+        $itemsStmt = $pdo->prepare('SELECT * FROM requisition_items WHERE requisition_id = :id');
+        $itemsStmt->execute(['id' => $id]);
+        $items = $itemsStmt->fetchAll();
+
+        foreach ($items as $item) {
+            if ($item['item_type'] !== 'material' || !$item['material_id']) {
+                continue;
+            }
+
+            // Lock the row so a concurrent withdrawal can't read a stale
+            // stock_qty while we're adding the cancelled quantity back.
+            $pdo->prepare('SELECT id FROM materials WHERE id = :id FOR UPDATE')
+                ->execute(['id' => $item['material_id']]);
+
+            $pdo->prepare('UPDATE materials SET stock_qty = stock_qty + :qty WHERE id = :id')
+                ->execute(['qty' => (int) $item['quantity_issued'], 'id' => $item['material_id']]);
+        }
+
+        $pdo->prepare("DELETE FROM material_transactions WHERE requisition_id = :id AND transaction_type = 'withdraw'")
+            ->execute(['id' => $id]);
+
+        $pdo->prepare('DELETE FROM requisitions WHERE id = :id')->execute(['id' => $id]);
+
+        $pdo->commit();
+
+        jsonResponse(['success' => true, 'message' => "ยกเลิกใบเบิกเลขที่ {$requisition['requisition_no']} และคืนจำนวนวัสดุเรียบร้อยแล้ว"]);
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        jsonResponse(['success' => false, 'message' => 'เกิดข้อผิดพลาดในการยกเลิกใบเบิก'], 500);
     }
 }
 
