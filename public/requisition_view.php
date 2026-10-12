@@ -4,8 +4,11 @@ require_once __DIR__ . '/../includes/header.php';
 $pdo = getDbConnection();
 $id = (int) ($_GET['id'] ?? 0);
 
-$stmt = $pdo->prepare('SELECT r.*, u.full_name AS created_by_name FROM requisitions r
-    JOIN users u ON u.id = r.created_by WHERE r.id = :id');
+$stmt = $pdo->prepare('SELECT r.*, u.full_name AS created_by_name, au.full_name AS approved_by_name
+    FROM requisitions r
+    JOIN users u ON u.id = r.created_by
+    LEFT JOIN users au ON au.id = r.approved_by
+    WHERE r.id = :id');
 $stmt->execute(['id' => $id]);
 $requisition = $stmt->fetch();
 
@@ -35,12 +38,32 @@ $items = $itemsStmt->fetchAll();
         <a href="<?= BASE_URL ?>public/requisitions.php" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> กลับไปหน้ารายการใบเบิก</a>
         <a href="<?= BASE_URL ?>public/requisition_print.php?id=<?= (int) $requisition['id'] ?>" target="_blank" class="btn btn-primary"><i class="bi bi-printer"></i> พิมพ์ใบเบิก</a>
         <?php if (isAdmin()): ?>
-            <button type="button" class="btn btn-outline-danger" onclick="cancelRequisitionView(<?= (int) $requisition['id'] ?>, '<?= htmlspecialchars($requisition['requisition_no'], ENT_QUOTES) ?>')">
-                <i class="bi bi-x-circle"></i> ยกเลิกใบเบิก
-            </button>
+            <?php if ($requisition['approved_at']): ?>
+                <button type="button" class="btn btn-outline-danger" disabled title="ใบเบิกนี้อนุมัติแล้ว ไม่สามารถยกเลิกได้">
+                    <i class="bi bi-x-circle"></i> ยกเลิกใบเบิก
+                </button>
+            <?php else: ?>
+                <button type="button" class="btn btn-outline-success" onclick="approveRequisitionView(<?= (int) $requisition['id'] ?>, '<?= htmlspecialchars($requisition['requisition_no'], ENT_QUOTES) ?>')">
+                    <i class="bi bi-check-circle"></i> อนุมัติใบเบิก
+                </button>
+                <button type="button" class="btn btn-outline-danger" onclick="cancelRequisitionView(<?= (int) $requisition['id'] ?>, '<?= htmlspecialchars($requisition['requisition_no'], ENT_QUOTES) ?>')">
+                    <i class="bi bi-x-circle"></i> ยกเลิกใบเบิก
+                </button>
+            <?php endif; ?>
         <?php endif; ?>
     </div>
 </div>
+
+<?php if ($requisition['approved_at']): ?>
+    <div class="alert alert-success">
+        <i class="bi bi-check-circle"></i> อนุมัติแล้วโดย <?= htmlspecialchars($requisition['approved_by_name'] ?? '-') ?>
+        เมื่อ <?= htmlspecialchars(formatThaiDateTime($requisition['approved_at'])) ?>
+    </div>
+<?php else: ?>
+    <div class="alert alert-secondary">
+        <i class="bi bi-hourglass-split"></i> รออนุมัติ
+    </div>
+<?php endif; ?>
 
 <div class="card mb-4">
     <div class="card-body">
@@ -115,6 +138,23 @@ function cancelRequisitionView(id, requisitionNo) {
         }
     }, 'json').fail(function (xhr) {
         alert((xhr.responseJSON && xhr.responseJSON.message) || 'เกิดข้อผิดพลาดในการยกเลิกใบเบิก');
+    });
+}
+
+// Same as the "อนุมัติ" button on the ใบเบิก list page - once approved,
+// cancelRequisitionView() above is blocked (server-side too). Reloads the
+// page afterwards so the alert box / buttons here reflect the new state.
+function approveRequisitionView(id, requisitionNo) {
+    if (!confirm(`ยืนยันอนุมัติใบเบิกเลขที่ ${requisitionNo}?\n\nหลังอนุมัติแล้วจะไม่สามารถยกเลิกใบเบิกนี้ได้อีก`)) {
+        return;
+    }
+    $.post(BASE_URL_JS + 'api/requisition_api.php', { action: 'approve', id }, function (res) {
+        alert(res.message);
+        if (res.success) {
+            window.location.reload();
+        }
+    }, 'json').fail(function (xhr) {
+        alert((xhr.responseJSON && xhr.responseJSON.message) || 'เกิดข้อผิดพลาดในการอนุมัติใบเบิก');
     });
 }
 </script>

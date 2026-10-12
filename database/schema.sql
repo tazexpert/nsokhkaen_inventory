@@ -129,7 +129,12 @@ CREATE TABLE requisitions (
     requester_position VARCHAR(150) NULL,
     created_by INT UNSIGNED NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_req_user FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT
+    -- NULL = รออนุมัติ. Once approved, the requisition can no longer be
+    -- cancelled (see api/requisition_api.php: cancelRequisition()).
+    approved_by INT UNSIGNED NULL,
+    approved_at DATETIME NULL,
+    CONSTRAINT fk_req_user FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_req_approved_by FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- Line items on a requisition slip (snapshot of name/unit so the printed

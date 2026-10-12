@@ -57,6 +57,10 @@ switch ($action) {
         $user = requireAdminApi();
         cancelRequisition($pdo, $user);
         break;
+    case 'approve':
+        $user = requireAdminApi();
+        approveRequisition($pdo, $user);
+        break;
     default:
         jsonResponse(['success' => false, 'message' => 'ไม่พบคำสั่งที่ร้องขอ'], 400);
 }
@@ -273,6 +277,10 @@ function cancelRequisition(PDO $pdo, array $user): void
         jsonResponse(['success' => false, 'message' => 'ไม่พบใบเบิก'], 404);
     }
 
+    if ($requisition['approved_at']) {
+        jsonResponse(['success' => false, 'message' => 'ใบเบิกนี้อนุมัติแล้ว ไม่สามารถยกเลิกได้'], 422);
+    }
+
     try {
         $pdo->beginTransaction();
 
@@ -310,6 +318,32 @@ function cancelRequisition(PDO $pdo, array $user): void
     }
 }
 
+// Admin only. A no-op audit mark, not a stock-affecting action (stock is
+// already deducted at creation time, same as before this feature) - it
+// just records who signed off on the requisition and, from that point on,
+// blocks cancelRequisition() above from undoing it.
+function approveRequisition(PDO $pdo, array $user): void
+{
+    $id = (int) ($_POST['id'] ?? 0);
+
+    $stmt = $pdo->prepare('SELECT * FROM requisitions WHERE id = :id');
+    $stmt->execute(['id' => $id]);
+    $requisition = $stmt->fetch();
+
+    if (!$requisition) {
+        jsonResponse(['success' => false, 'message' => 'ไม่พบใบเบิก'], 404);
+    }
+
+    if ($requisition['approved_at']) {
+        jsonResponse(['success' => false, 'message' => 'ใบเบิกนี้อนุมัติไปแล้ว'], 422);
+    }
+
+    $pdo->prepare('UPDATE requisitions SET approved_by = :approved_by, approved_at = NOW() WHERE id = :id')
+        ->execute(['approved_by' => $user['id'], 'id' => $id]);
+
+    jsonResponse(['success' => true, 'message' => "อนุมัติใบเบิกเลขที่ {$requisition['requisition_no']} เรียบร้อยแล้ว"]);
+}
+
 // Staff only ever see their own requisitions (the ones they personally
 // created/submitted); admin sees everything.
 function listRequisitions(PDO $pdo, array $user): void
@@ -318,10 +352,11 @@ function listRequisitions(PDO $pdo, array $user): void
     $startDate = sanitizeString($_GET['start_date'] ?? '');
     $endDate = sanitizeString($_GET['end_date'] ?? '');
 
-    $sql = "SELECT r.*, u.full_name AS created_by_name,
+    $sql = "SELECT r.*, u.full_name AS created_by_name, au.full_name AS approved_by_name,
                 (SELECT COUNT(*) FROM requisition_items ri WHERE ri.requisition_id = r.id) AS item_count
             FROM requisitions r
             JOIN users u ON u.id = r.created_by
+            LEFT JOIN users au ON au.id = r.approved_by
             WHERE 1=1";
     $params = [];
 
@@ -356,8 +391,11 @@ function getRequisition(PDO $pdo, array $user): void
 {
     $id = (int) ($_GET['id'] ?? 0);
 
-    $stmt = $pdo->prepare('SELECT r.*, u.full_name AS created_by_name FROM requisitions r
-        JOIN users u ON u.id = r.created_by WHERE r.id = :id');
+    $stmt = $pdo->prepare('SELECT r.*, u.full_name AS created_by_name, au.full_name AS approved_by_name
+        FROM requisitions r
+        JOIN users u ON u.id = r.created_by
+        LEFT JOIN users au ON au.id = r.approved_by
+        WHERE r.id = :id');
     $stmt->execute(['id' => $id]);
     $requisition = $stmt->fetch();
 

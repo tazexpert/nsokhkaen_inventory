@@ -34,7 +34,7 @@
 <table class="table table-striped align-middle" id="requisitionsTable">
     <thead>
     <tr>
-        <th>เลขที่ใบเบิก</th><th>วันที่</th><th>ผู้เบิก</th><th>ใช้งาน</th><th>จำนวนรายการ</th><th>ผู้บันทึก</th><th></th>
+        <th>เลขที่ใบเบิก</th><th>วันที่</th><th>ผู้เบิก</th><th>ใช้งาน</th><th>จำนวนรายการ</th><th>ผู้บันทึก</th><th>สถานะ</th><th></th>
     </tr>
     </thead>
     <tbody></tbody>
