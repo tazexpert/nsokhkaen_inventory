@@ -40,7 +40,7 @@ $itemsStmt = $pdo->prepare('SELECT * FROM requisition_items WHERE requisition_id
 $itemsStmt->execute(['id' => $id]);
 $items = $itemsStmt->fetchAll();
 
-$minRows = 15;
+$minRows = 11;
 $blankRows = max(0, $minRows - count($items));
 
 // Keeps the paper-form look of a blank line to sign/write on when a value
@@ -132,6 +132,12 @@ function signatureLine(?string $name, int $dots = 43): string
            margin-top above on specificity. */
         .signatures.sign-grid { margin-top: auto; }
         .sign-block { text-align: center; }
+        /* Blank room to physically pen-sign above the "ลงชื่อ ...." line,
+           instead of having to sign on top of the printed dots/name. Sized
+           down from a naive 15mm to fit a single A4 page after the table
+           above was trimmed to make room (see $minRows) - not meant to be
+           generous, just enough for an actual signature. */
+        .sign-space { height: 9mm; }
         .approve-title { text-align: center; font-weight: bold; font-size: 18pt; margin-top: 8px; }
         @media print {
             .toolbar { display: none; }
@@ -181,11 +187,13 @@ function signatureLine(?string $name, int $dots = 43): string
 
 <div class="sign-grid">
     <div class="sign-block">
+        <div class="sign-space"></div>
         <div>ลงชื่อ <?= signatureLine($requisition['creator_name']) ?> ผู้เบิก</div>
         <div>ตำแหน่ง <?= blankIfEmpty($requisition['creator_position']) ?></div>
         <div>วันที่ <?= formatThaiDate($requisition['created_at']) ?></div>
     </div>
     <div class="sign-block">
+        <div class="sign-space"></div>
         <div>ลงชื่อ <?= signatureLine($signatorySettings['issuer_name'] ?? null) ?> ผู้จ่ายวัสดุ</div>
         <div>ตำแหน่ง <?= blankIfEmpty($signatorySettings['issuer_position'] ?? null) ?></div>
         <div>วันที่ <?= formatThaiDate($requisition['created_at']) ?></div>
@@ -194,8 +202,9 @@ function signatureLine(?string $name, int $dots = 43): string
 
 <div class="signatures sign-grid">
     <div>
-        <div class="approve-title">อนุญาติให้เบิกได้</div>
+        <div class="approve-title">อนุญาตให้เบิกได้</div>
         <div class="sign-block">
+            <div class="sign-space"></div>
             <div>ลงชื่อ <?= signatureLine($signatorySettings['approver_name'] ?? null) ?></div>
             <div>ตำแหน่ง <?= blankIfEmpty($signatorySettings['approver_position'] ?? null) ?></div>
             <div>วันที่ <?= formatThaiDate($requisition['created_at']) ?></div>

@@ -40,8 +40,8 @@ $draft = $_SESSION['requisition_draft'] ?? [
             </div>
             <div class="card-body border-top" id="cartFormWrapper" style="<?= $draft['items'] ? '' : 'display:none;' ?>">
                 <div class="mb-2">
-                    <label class="form-label">ขอเบิกวัสดุเพื่อใช้งาน</label>
-                    <input type="text" class="form-control" id="req_purpose" value="<?= htmlspecialchars($draft['purpose']) ?>" placeholder="เช่น ใช้ในงานประชุม...">
+                    <label class="form-label">ขอเบิกวัสดุเพื่อใช้งาน <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="req_purpose" required value="<?= htmlspecialchars($draft['purpose']) ?>" placeholder="เช่น ใช้ในงานประชุม...">
                 </div>
                 <button class="btn btn-primary w-100" onclick="submitRequisition()">
                     <i class="bi bi-save"></i> บันทึกใบเบิก
@@ -73,6 +73,10 @@ function showAlert(message, type = 'danger') {
 $('#btnManualLookup').on('click', function () {
     const qr = $('#manualQr').val().trim();
     if (qr) lookupQr(qr);
+});
+
+$('#req_purpose').on('input', function () {
+    $(this).removeClass('is-invalid');
 });
 
 $('#manualQr').on('keypress', function (e) {
@@ -225,9 +229,20 @@ function renderCart(items) {
 }
 
 function submitRequisition() {
+    // #req_purpose isn't inside a <form>, so its `required` attribute alone
+    // never gets enforced (there's no submit event for the browser to
+    // intercept) - check it explicitly instead.
+    const purpose = $('#req_purpose').val().trim();
+    if (!purpose) {
+        showAlert('กรุณากรอกวัตถุประสงค์ที่ขอเบิกวัสดุเพื่อใช้งาน');
+        $('#req_purpose').addClass('is-invalid').trigger('focus');
+        return;
+    }
+    $('#req_purpose').removeClass('is-invalid');
+
     const payload = {
         action: 'create',
-        purpose: $('#req_purpose').val(),
+        purpose,
     };
 
     $.post(REQ_API_URL, payload)

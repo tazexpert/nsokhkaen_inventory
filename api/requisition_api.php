@@ -153,6 +153,12 @@ function createRequisition(PDO $pdo, array $user): void
     if (count($items) === 0) {
         jsonResponse(['success' => false, 'message' => 'กรุณาสแกนหรือเพิ่มรายการอย่างน้อย 1 รายการ'], 422);
     }
+    // Required on the scan page's form too (public/scan.php) - repeated
+    // here since that field isn't inside a real <form>, so nothing stops a
+    // direct API call from skipping it.
+    if (trim($purpose ?? '') === '') {
+        jsonResponse(['success' => false, 'message' => 'กรุณากรอกวัตถุประสงค์ที่ขอเบิกวัสดุเพื่อใช้งาน'], 422);
+    }
 
     // ผู้เบิก is always the logged-in account making the requisition (not a
     // free-typed name) - the printed/viewed slip already pulls name/position
